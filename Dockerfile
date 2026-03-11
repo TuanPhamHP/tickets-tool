@@ -7,4 +7,4 @@ RUN yarn build
 EXPOSE 3000
 ENV PORT=3000
 ENV NODE_ENV=production
-CMD ["sh", "-c", "yarn db:push && node .output/server/index.mjs"]
+CMD ["sh", "-c", "yarn db:push; echo 'DB done, starting server...'; node .output/server/index.mjs"]
