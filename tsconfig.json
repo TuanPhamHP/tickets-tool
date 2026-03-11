@@ -1,0 +1,21 @@
+{
+	// https://nuxt.com/docs/guide/concepts/typescript
+	"extends": "./.nuxt/tsconfig.json",
+	"compilerOptions": {
+		"target": "esnext",
+		"module": "esnext",
+		"moduleResolution": "node",
+		"strict": true,
+		"esModuleInterop": true,
+		"baseUrl": ".",
+		"paths": {
+			"@/*": ["./*"],
+			"~/*": ["./*"]
+		},
+		"types": ["vue"]
+	},
+	"vueCompilerOptions": {
+		"target": 3
+	},
+	"exclude": ["node_modules"]
+}

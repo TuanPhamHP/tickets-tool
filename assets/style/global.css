@@ -1,0 +1,88 @@
+/* @tailwind base;
+@tailwind components;
+@tailwind utilities; */
+
+@import 'tailwindcss';
+@import '@nuxt/ui';
+
+body {
+	margin: 0;
+}
+
+*:not(i) {
+	font-family: 'Inter';
+}
+
+.text-md {
+	font-size: 14px !important;
+}
+
+.hiding-panels div[role='tablist'] {
+	display: none;
+}
+
+.fw-500 {
+	font-weight: 500 !important;
+}
+.bg-primary-gradient {
+	background: linear-gradient(114.67deg, #2e7d32 0%, #37a35f 100%);
+}
+
+*::-webkit-scrollbar {
+	width: 0px;
+}
+
+*::-webkit-scrollbar-track {
+	background: #e6e6e6;
+	border-radius: 0px;
+}
+*::-webkit-scrollbar-thumb {
+	border-radius: 0px;
+	background: rgb(96, 96, 96);
+}
+
+.loading-spin {
+	animation: loadingSpin 1.2s infinite alternate;
+}
+
+.main-tabs div.bg--ui-primary {
+	background: linear-gradient(114.67deg, #2e7d32 0%, #37a35f 100%) !important;
+}
+button {
+	cursor: pointer;
+}
+
+.prose ul {
+	list-style: disc;
+	padding-left: 30px;
+}
+
+.prose ol {
+	list-style: decimal;
+	padding-left: 30px;
+}
+.prose h1,
+.prose h2,
+.prose h3,
+.prose h4 {
+	font-weight: bold;
+}
+
+@keyframes loadingSpin {
+	0% {
+		transform: rotateZ(0deg);
+	}
+	100% {
+		transform: rotateZ(360deg);
+	}
+}
+
+.mention-tag {
+	display: inline-block;
+	background: #e8f5e9;
+	color: #2e7d32;
+	font-weight: 500;
+	padding: 0 4px;
+	border-radius: 4px;
+	font-size: 0.85em;
+}

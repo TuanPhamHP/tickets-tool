@@ -1,0 +1,18 @@
+import { eq, and } from 'drizzle-orm';
+import { notifications } from '../../../database/schema';
+import { requireAuth } from '../../../utils/auth';
+import { apiSuccess } from '../../../utils/response';
+
+export default defineEventHandler(async (event) => {
+	const auth = await requireAuth(event);
+	const userId = Number(auth.sub);
+	const id = Number(getRouterParam(event, 'id'));
+
+	const db = useDB();
+	await db
+		.update(notifications)
+		.set({ isRead: true })
+		.where(and(eq(notifications.id, id), eq(notifications.userId, userId)));
+
+	return apiSuccess(null, 'Đã đọc');
+});

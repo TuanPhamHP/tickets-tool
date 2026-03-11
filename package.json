@@ -1,0 +1,46 @@
+{
+	"name": "tickets-tool",
+	"private": true,
+	"type": "module",
+	"scripts": {
+		"build": "nuxt build",
+		"dev": "nuxt dev",
+		"generate": "nuxt generate",
+		"preview": "nuxt preview",
+		"postinstall": "nuxt prepare",
+		"db:generate": "drizzle-kit generate",
+		"db:push": "drizzle-kit push",
+		"db:studio": "drizzle-kit studio"
+	},
+	"dependencies": {
+		"@nuxt/eslint": "1.2.0",
+		"@nuxt/icon": "1.11.0",
+		"@nuxt/image": "1.10.0",
+		"@nuxt/ui": "3.0.1",
+		"@pinia/nuxt": "^0.10.1",
+		"@tailwindcss/vite": "^4.0.15",
+		"@types/marked": "^6.0.0",
+		"@types/node": "^22.13.13",
+		"bcryptjs": "^3.0.3",
+		"date-fns": "^4.1.0",
+		"date-fns-tz": "^3.2.0",
+		"drizzle-orm": "^0.45.1",
+		"eslint": "^9.0.0",
+		"jose": "^6.2.1",
+		"marked": "^17.0.4",
+		"mysql2": "^3.19.1",
+		"nuxt": "^3.16.1",
+		"pinia": "^3.0.1",
+		"postcss": "^8.4.47",
+		"sass": "^1.86.0",
+		"tailwindcss": "^4.0.15",
+		"typescript": "^5.6.3",
+		"vue": "^3.5.13",
+		"vue-router": "^4.5.0"
+	},
+	"packageManager": "yarn@1.22.22+sha512.a6b2f7906b721bba3d67d4aff083df04dad64c399707841b7acf00f6b133b7ac24255f2652fa22ae3534329dc6180534e98d17432037ff6fd140556e2bb3137e",
+	"devDependencies": {
+		"@types/bcryptjs": "^3.0.0",
+		"drizzle-kit": "^0.31.9"
+	}
+}
