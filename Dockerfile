@@ -1,15 +1,10 @@
-FROM node:20 AS build
-
+FROM node:20
 WORKDIR /app
-
-# Copy package để cache npm install
-COPY package*.json ./
-RUN npm install
-
-# Copy toàn bộ source
+COPY package*.json yarn.lock ./
+RUN npm install -g yarn && yarn install
 COPY . .
-
-# Build production
-RUN npm run generate   
-
-# Output dist nằm ở .output/public hoặc dist tùy project
+RUN yarn build
+EXPOSE 3000
+ENV PORT=3000
+ENV NODE_ENV=production
+CMD ["node", ".output/server/index.mjs"]
