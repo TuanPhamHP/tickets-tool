@@ -36,7 +36,7 @@ export default defineEventHandler(async event => {
 
 	const bgdDept = insertedDepts.find(d => d.name === 'Ban Giám Đốc')!;
 	const itDept = insertedDepts.find(d => d.name === 'Phòng IT')!;
-	const devDept = insertedDepts.find(d => d.name === 'Dev Team')!;
+	const devDept = insertedDepts.find(d => d.name === 'Trung tâm công nghệ')!;
 	const kdDept = insertedDepts.find(d => d.name === 'Phòng Kinh Doanh')!;
 
 	// Seed users
