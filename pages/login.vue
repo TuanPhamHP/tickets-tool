@@ -165,7 +165,6 @@
 							// Local server trả { data: { token, user: {...} } }
 							const user: Record<string, any> = rs.data?.user ?? rs.data;
 							const token: string = rs.data?.token ?? '';
-							console.log(authStore);
 
 							authStore.setUser({ ...user, name: user.name, id: user.id, token });
 							authStore.setToken(token);
