@@ -67,13 +67,33 @@
 				</template>
 
 				<template #actions-cell="{ row }">
-					<UButton
-						variant="ghost"
-						color="neutral"
-						icon="i-heroicons-pencil"
-						size="xs"
-						@click="openEditModal(row.original)"
-					/>
+					<div class="flex items-center gap-1">
+						<UButton
+							variant="ghost"
+							color="neutral"
+							icon="i-heroicons-pencil"
+							size="xs"
+							@click="openEditModal(row.original)"
+						/>
+						<UButton
+							v-if="row.original.isActive && row.original.id !== currentUserId"
+							variant="ghost"
+							color="error"
+							icon="i-heroicons-lock-closed"
+							size="xs"
+							title="Thu hồi tài khoản"
+							@click="confirmToggle(row.original, false)"
+						/>
+						<UButton
+							v-else-if="!row.original.isActive"
+							variant="ghost"
+							color="success"
+							icon="i-heroicons-lock-open"
+							size="xs"
+							title="Kích hoạt tài khoản"
+							@click="confirmToggle(row.original, true)"
+						/>
+					</div>
 				</template>
 			</UTable>
 
@@ -93,7 +113,54 @@
 			/>
 		</div>
 
-		<!-- Create/Edit Modal -->
+		<!-- Confirm Toggle Modal -->
+	<UModal v-model:open="confirmOpen">
+		<template #content>
+			<UCard>
+				<template #header>
+					<div class="flex items-center justify-between">
+						<div class="flex items-center gap-2">
+							<div :class="toggleTarget?.isActive ? 'w-8 h-8 rounded-full bg-red-100 flex items-center justify-center' : 'w-8 h-8 rounded-full bg-green-100 flex items-center justify-center'">
+								<UIcon :name="toggleTarget?.isActive ? 'i-heroicons-lock-closed' : 'i-heroicons-lock-open'" :class="toggleTarget?.isActive ? 'text-red-600 text-base' : 'text-green-600 text-base'" />
+							</div>
+							<h3 class="text-base font-semibold">{{ toggleTarget?.isActive ? 'Thu hồi tài khoản' : 'Kích hoạt tài khoản' }}</h3>
+						</div>
+						<UButton variant="ghost" color="neutral" icon="i-heroicons-x-mark" @click="confirmOpen = false" />
+					</div>
+				</template>
+
+				<div class="py-2 space-y-3">
+					<p class="text-sm text-gray-700">
+						<template v-if="toggleTarget?.isActive">
+							Bạn có chắc muốn <span class="font-semibold text-red-600">thu hồi</span> tài khoản của
+							<span class="font-semibold">{{ toggleTarget?.name }}</span>?
+							<br />
+							<span class="text-gray-500">Người dùng sẽ không thể đăng nhập cho đến khi được kích hoạt lại.</span>
+						</template>
+						<template v-else>
+							Bạn có chắc muốn <span class="font-semibold text-green-600">kích hoạt</span> lại tài khoản của
+							<span class="font-semibold">{{ toggleTarget?.name }}</span>?
+						</template>
+					</p>
+				</div>
+
+				<template #footer>
+					<div class="flex justify-end gap-2">
+						<UButton variant="outline" color="neutral" @click="confirmOpen = false">Huỷ</UButton>
+						<UButton
+							:loading="toggling"
+							:color="toggleTarget?.isActive ? 'error' : 'success'"
+							@click="doToggle"
+						>
+							{{ toggleTarget?.isActive ? 'Thu hồi' : 'Kích hoạt' }}
+						</UButton>
+					</div>
+				</template>
+			</UCard>
+		</template>
+	</UModal>
+
+	<!-- Create/Edit Modal -->
 		<UModal v-model:open="modalOpen">
 			<template #content>
 				<UCard class="max-h-[90vh] overflow-y-auto">
@@ -205,6 +272,7 @@
 	const { $api } = useNuxtApp();
 	const authStore = useAuthStore();
 	const { user } = storeToRefs(authStore);
+	const currentUserId = computed(() => Number((user.value as any)?.id));
 	const { successToast, errorToast } = useCustomToast();
 	const router = useRouter();
 
@@ -351,6 +419,33 @@
 		modalOpen.value = true;
 	};
 
+	// ─── Toggle active state ────────────────────────────────────────────────────
+	const confirmOpen = ref(false);
+	const toggleTarget = ref<any>(null);
+	const toggling = ref(false);
+
+	const confirmToggle = (u: any, activate: boolean) => {
+		toggleTarget.value = { ...u, isActive: !activate };
+		confirmOpen.value = true;
+	};
+
+	const doToggle = async () => {
+		if (!toggleTarget.value) return;
+		toggling.value = true;
+		const activate = !toggleTarget.value.isActive;
+		try {
+			await $api.admin.updateUser(toggleTarget.value.id, { isActive: activate });
+			successToast({ title: activate ? 'Kích hoạt tài khoản thành công' : 'Thu hồi tài khoản thành công' });
+			confirmOpen.value = false;
+			await fetchUsers();
+		} catch (err: unknown) {
+			errorToast({ title: 'Lỗi', description: (err as any)?.data?.message || 'Không thể cập nhật trạng thái' });
+		} finally {
+			toggling.value = false;
+		}
+	};
+
+	// ─── Create / Edit modal ──────────────────────────────────────────────────────
 	const closeModal = () => {
 		modalOpen.value = false;
 		editingUser.value = null;

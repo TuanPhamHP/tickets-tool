@@ -10,11 +10,12 @@ export default defineEventHandler(async (event) => {
 	if (!body?.email || !body?.password) {
 		throw createError({ statusCode: 400, statusMessage: 'Email và mật khẩu là bắt buộc' });
 	}
+	const rememberMe = !!body.rememberMe;
 
 	const db = useDB();
 	const [user] = await db.select().from(users).where(eq(users.email, body.email)).limit(1);
 
-	if (!user || !user.isActive) {
+	if (!user) {
 		throw createError({ statusCode: 401, statusMessage: 'Email hoặc mật khẩu không đúng' });
 	}
 
@@ -23,17 +24,19 @@ export default defineEventHandler(async (event) => {
 		throw createError({ statusCode: 401, statusMessage: 'Email hoặc mật khẩu không đúng' });
 	}
 
-	const token = await signToken({
-		sub: String(user.id),
-		email: user.email,
-		role: user.role,
-		name: user.name,
-	});
+	if (!user.isActive) {
+		throw createError({ statusCode: 403, statusMessage: 'Tài khoản của bạn đã bị tạm khoá bởi quản trị viên. Vui lòng liên hệ admin để được hỗ trợ.' });
+	}
+
+	const token = await signToken(
+		{ sub: String(user.id), email: user.email, role: user.role, name: user.name },
+		rememberMe ? '30d' : '7d',
+	);
 
 	// Set HTTP-only cookie
 	setCookie(event, 'auth_token', token, {
 		httpOnly: true,
-		maxAge: 7 * 24 * 60 * 60,
+		maxAge: rememberMe ? 30 * 24 * 60 * 60 : 7 * 24 * 60 * 60,
 		path: '/',
 		sameSite: 'lax',
 	});

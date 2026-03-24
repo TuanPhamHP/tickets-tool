@@ -19,6 +19,12 @@ export function useDB() {
 		charset: 'utf8mb4',
 		waitForConnections: true,
 		connectionLimit: 10,
+		timezone: 'Z',
+	});
+
+	// Force MySQL session timezone to UTC so TIMESTAMP values are always returned as UTC
+	pool.on('connection', (connection) => {
+		connection.query("SET time_zone = '+00:00'");
 	});
 
 	_db = drizzle(pool, { schema, mode: 'default' });

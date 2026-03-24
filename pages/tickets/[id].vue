@@ -110,9 +110,15 @@
 								<dt class="text-xs font-medium text-gray-500 uppercase tracking-wide">Ngày tạo</dt>
 								<dd class="mt-1 text-sm text-gray-700">{{ formatDate(ticket.createdAt) }}</dd>
 							</div>
-							<div v-if="ticket.estimateHours">
-								<dt class="text-xs font-medium text-gray-500 uppercase tracking-wide">Thời gian dự kiến:</dt>
-								<dd class="mt-1 text-sm text-gray-700">{{ ticket.estimateHours }} giờ</dd>
+							<div v-if="ticket.estimateDays">
+								<dt class="text-xs font-medium text-gray-500 uppercase tracking-wide">Thời gian dự kiến</dt>
+								<dd class="mt-1 text-sm text-gray-700 bg-green-50 text-green-700 w-fit rounded p-1">
+									{{ ticket.estimateDays }} ngày
+								</dd>
+							</div>
+							<div v-if="ticket.estimateCost !== null && ticket.estimateCost !== undefined && canSeeCost">
+								<dt class="text-xs font-medium text-gray-500 uppercase tracking-wide">Chi phí dự kiến</dt>
+								<dd class="mt-1 text-sm font-medium text-orange-700">{{ formatCost(ticket.estimateCost) }}</dd>
 							</div>
 							<div v-if="ticket.assignee">
 								<dt class="text-xs font-medium text-gray-500 uppercase tracking-wide">Người thực hiện</dt>
@@ -176,16 +182,15 @@
 								Từ chối
 							</UButton>
 
-							<!-- Estimate -->
+							<!-- Review (tech) -->
 							<UButton
-								v-if="availableActions.includes('estimate')"
-								icon="i-heroicons-clock"
-								:loading="actionLoading === 'estimate'"
+								v-if="availableActions.includes('review')"
+								icon="i-heroicons-clipboard-document-check"
+								:loading="actionLoading === 'review'"
 								color="info"
-								variant="outline"
-								@click="openActionModal('estimate')"
+								@click="openActionModal('review')"
 							>
-								Báo Estimate
+								Xem xét & Estimate
 							</UButton>
 
 							<!-- Start -->
@@ -277,25 +282,62 @@
 						<h3 class="font-semibold text-gray-800 mb-4">Bình luận</h3>
 
 						<!-- Comment list -->
-						<div class="space-y-3 mb-4">
-							<div v-for="comment in comments" :key="comment.id" class="flex gap-3">
-								<UAvatar :alt="comment.user?.name || 'U'" size="sm" class="flex-shrink-0" />
-								<div class="flex-1 bg-gray-50 rounded-lg p-3">
-									<div class="flex items-center gap-2 mb-1">
-										<span class="text-sm font-medium text-gray-800">{{ comment.user?.name }}</span>
-										<span class="text-xs text-gray-400">{{ formatDateTime(comment.createdAt) }}</span>
-									</div>
-									<p class="text-sm text-gray-700 comment-content" v-html="renderComment(comment.content)" />
-								</div>
+						<div ref="commentListRef" class="space-y-3 mb-4 max-h-96 overflow-y-auto pr-1" @scroll="onCommentScroll">
+							<!-- Load more indicator -->
+							<div v-if="loadingMoreComments" class="flex justify-center py-2">
+								<UIcon name="i-heroicons-arrow-path" class="w-4 h-4 text-gray-400 animate-spin" />
 							</div>
+							<div v-else-if="commentHasMore" class="text-xs text-gray-400 text-center py-1">Cuộn lên để xem thêm</div>
+
 							<div v-if="comments.length === 0" class="text-sm text-gray-400 text-center py-4">
 								Chưa có bình luận nào
+							</div>
+
+							<div
+								v-for="comment in comments"
+								:key="comment.id"
+								class="flex gap-2"
+								:class="comment.user?.id === (user as any)?.id ? 'flex-row-reverse' : 'flex-row'"
+							>
+								<UAvatar :alt="comment.user?.name || 'U'" size="sm" class="flex-shrink-0 mt-1" />
+								<div
+									class="max-w-[75%] rounded-2xl px-3 py-2"
+									:class="
+										comment.user?.id === (user as any)?.id
+											? 'bg-green-100 text-gray-700 rounded-tr-sm'
+											: 'bg-gray-100 text-gray-800 rounded-tl-sm'
+									"
+								>
+									<div
+										class="flex items-center gap-2 mb-0.5"
+										:class="comment.user?.id === (user as any)?.id ? 'flex-row-reverse' : ''"
+									>
+										<span
+											class="text-xs font-semibold"
+											:class="comment.user?.id === (user as any)?.id ? 'hidden text-gray-600' : 'text-gray-600'"
+											>{{ comment.user?.name }}</span
+										>
+									</div>
+									<p
+										class="text-sm comment-content leading-relaxed"
+										:class="comment.user?.id === (user as any)?.id ? 'text-gray-700' : 'text-gray-700'"
+										v-html="renderComment(comment.content)"
+									/>
+									<span class="text-xs opacity-60">{{ formatTimeWithGap(comment.createdAt) }}</span>
+								</div>
 							</div>
 						</div>
 
 						<!-- Add comment -->
 						<div class="flex gap-2">
-							<MentionTextarea v-model="newComment" :users="mentionUsers" placeholder="Viết bình luận... (gõ @ để tag người dùng)" :rows="2" class="flex-1" />
+							<MentionTextarea
+								v-model="newComment"
+								:users="mentionUsers"
+								placeholder="Viết bình luận... (gõ @ để tag, Enter để gửi, Shift+Enter xuống dòng)"
+								:rows="2"
+								class="flex-1"
+								@submit="addComment"
+							/>
 							<UButton
 								:loading="addingComment"
 								:disabled="!newComment.trim()"
@@ -349,10 +391,36 @@
 					</template>
 
 					<div class="space-y-4">
-						<!-- Estimate: hours input -->
-						<UFormField v-if="currentAction === 'estimate'" label="Số giờ estimate" required>
-							<UInput v-model="actionHours" type="number" placeholder="Nhập số giờ" class="w-full" />
-						</UFormField>
+						<!-- Review: estimate days + cost -->
+						<template v-if="currentAction === 'review'">
+							<UFormField label="Số ngày thực hiện dự kiến" required>
+								<UInput
+									v-model="reviewDays"
+									type="number"
+									min="0.5"
+									step="0.5"
+									placeholder="Ví dụ: 3.5"
+									class="w-full"
+								/>
+							</UFormField>
+							<UFormField label="Chi phí dự kiến (VNĐ)" required>
+								<UInput
+									v-model="reviewCostDisplay"
+									type="text"
+									inputmode="numeric"
+									placeholder="Ví dụ: 5.000.000"
+									class="w-full"
+								/>
+							</UFormField>
+							<UFormField label="Ghi chú kỹ thuật (tuỳ chọn)">
+								<UTextarea
+									v-model="actionNote"
+									placeholder="Mô tả phạm vi, rủi ro, giải pháp..."
+									:rows="3"
+									class="w-full"
+								/>
+							</UFormField>
+						</template>
 
 						<!-- Reject/Cancel: reason required -->
 						<UFormField
@@ -364,7 +432,7 @@
 						</UFormField>
 
 						<!-- Others: optional note -->
-						<UFormField v-if="!['reject', 'cancel'].includes(currentAction)" label="Ghi chú (tuỳ chọn)">
+						<UFormField v-if="!['review', 'reject', 'cancel'].includes(currentAction)" label="Ghi chú (tuỳ chọn)">
 							<UTextarea v-model="actionNote" placeholder="Ghi chú thêm..." :rows="3" class="w-full" />
 						</UFormField>
 					</div>
@@ -391,7 +459,13 @@
 	import { useAuthStore } from '~/store/auth';
 	import { storeToRefs } from 'pinia';
 	import { useCustomToast } from '~/composable/useCustomToast';
-	import { formatDateTime, getHistoryLabel, formatDescription } from '@/utils/formater';
+	import {
+		formatDateTime,
+		formatTimeWithGap,
+		getHistoryLabel,
+		formatDescription,
+		renderComment,
+	} from '@/utils/formater';
 
 	definePageMeta({ layout: 'default' });
 
@@ -406,6 +480,11 @@
 	const ticket = ref<any>(null);
 	const loading = ref(false);
 	const comments = ref<any[]>([]);
+	const commentPage = ref(1);
+	const commentTotal = ref(0);
+	const commentHasMore = computed(() => comments.value.length < commentTotal.value);
+	const loadingMoreComments = ref(false);
+	const commentListRef = ref<HTMLElement | null>(null);
 	const history = ref<any[]>([]);
 	const newComment = ref('');
 	const addingComment = ref(false);
@@ -425,9 +504,10 @@
 	});
 
 	const typeOptions = [
-		{ label: 'Vận hành', value: '1' },
-		{ label: 'Thay đổi', value: '2' },
-		{ label: 'Phát triển', value: '3' },
+		{ label: 'Xử lý vận hành', value: '1' },
+		{ label: 'Thay đổi và tối ưu', value: '2' },
+		{ label: 'Trích xuất dữ liệu (xây module)', value: '3' },
+		{ label: 'Phát triển tính năng mới', value: '4' },
 	];
 
 	const priorityOptions = [
@@ -447,27 +527,53 @@
 	const actionNote = ref('');
 	const actionReason = ref('');
 	const actionHours = ref('');
+	const reviewDays = ref('');
+	const reviewCost = ref('');
+	const reviewCostDisplay = computed({
+		get(): string {
+			if (!reviewCost.value) return '';
+			return reviewCost.value.replace(/\B(?=(\d{3})+(?!\d))/g, '.');
+		},
+		set(val: string) {
+			reviewCost.value = (val ?? '').replace(/\D/g, '');
+		},
+	});
 
-	const workflowSteps = [
-		{ key: 'draft', label: 'Nháp' },
-		{ key: 'pending_approval', label: 'Chờ duyệt' },
-		{ key: 'approved', label: 'Đã duyệt' },
-		{ key: 'in_progress', label: 'Đang thực hiện' },
-		{ key: 'completed', label: 'Hoàn tất' },
-		{ key: 'accepted', label: 'Nghiệm thu' },
-	];
+	const workflowSteps = computed(() => {
+		const steps = [
+			{ key: 'draft', label: 'Nháp' },
+			{ key: 'pending_review', label: 'Tech xem xét' },
+			...(ticket.value?.type !== 1 ? [{ key: 'pending_approval', label: 'Chờ phê duyệt' }] : []),
+			{ key: 'approved', label: 'Đã duyệt' },
+			{ key: 'in_progress', label: 'Đang thực hiện' },
+			{ key: 'completed', label: 'Hoàn tất' },
+			{ key: 'accepted', label: 'Nghiệm thu' },
+		];
+		return steps;
+	});
 
-	const statusOrder = ['draft', 'pending_approval', 'approved', 'in_progress', 'completed', 'accepted'];
+	const statusOrder = computed(() => {
+		if (ticket.value?.type === 1) {
+			return ['draft', 'pending_review', 'approved', 'in_progress', 'completed', 'accepted'];
+		}
+		return ['draft', 'pending_review', 'pending_approval', 'approved', 'in_progress', 'completed', 'accepted'];
+	});
 
 	const isStepDone = (key: string) => {
 		if (!ticket.value) return false;
 		if (ticket.value.status === 'rejected' || ticket.value.status === 'cancelled') {
 			return key === 'draft';
 		}
-		const currentIdx = statusOrder.indexOf(ticket.value.status);
-		const stepIdx = statusOrder.indexOf(key);
+		const currentIdx = statusOrder.value.indexOf(ticket.value.status);
+		const stepIdx = statusOrder.value.indexOf(key);
 		return stepIdx <= currentIdx;
 	};
+
+	// Only approver/admin can see cost estimate
+	const canSeeCost = computed(() => {
+		const role = (user.value as any)?.role;
+		return role === 'approver' || role === 'admin' || role === 'implementer';
+	});
 
 	// Role-based available actions
 	const availableActions = computed(() => {
@@ -481,31 +587,48 @@
 
 		const actions: string[] = [];
 
+		// Requester: submit / edit / cancel từ draft; cancel từ pending_review và pending_approval
 		if (isRequester && status === 'draft') {
 			actions.push('submit', 'edit', 'cancel');
 		}
-		if (isApprover && status === 'pending_approval') {
-			actions.push('approve', 'reject', 'edit');
+		if (isRequester && ['pending_review', 'pending_approval', 'approved', 'rejected'].includes(status)) {
+			actions.push('cancel');
+		}
+		if (isRequester && status === 'rejected') {
+			actions.push('submit', 'edit');
+		}
+
+		// Implementer: xem xét & estimate khi pending_review; bắt đầu & hoàn tất khi approved/in_progress
+		if (isImplementer && status === 'pending_review') {
+			actions.push('review');
 		}
 		if (isImplementer && status === 'approved') {
-			actions.push('estimate', 'start');
+			actions.push('start');
 		}
 		if (isImplementer && status === 'in_progress') {
 			actions.push('complete');
 		}
+
+		// Approver: phê duyệt / từ chối khi pending_approval
+		if (isApprover && status === 'pending_approval') {
+			actions.push('approve', 'reject');
+		}
+
+		// Requester/admin: nghiệm thu
 		if (isRequester && status === 'completed') {
 			actions.push('accept');
 		}
 
-		return actions;
+		return [...new Set(actions)];
 	});
 
 	// Helpers
 	const getStatusColor = (status: string) => {
 		const map: Record<string, string> = {
 			draft: 'neutral',
+			pending_review: 'info',
 			pending_approval: 'warning',
-			approved: 'info',
+			approved: 'success',
 			in_progress: 'warning',
 			completed: 'success',
 			accepted: 'success',
@@ -518,7 +641,8 @@
 	const getStatusLabel = (status: string) => {
 		const map: Record<string, string> = {
 			draft: 'Nháp',
-			pending_approval: 'Chờ duyệt',
+			pending_review: 'Chờ tech xem xét',
+			pending_approval: 'Chờ phê duyệt',
 			approved: 'Đã duyệt',
 			in_progress: 'Đang thực hiện',
 			completed: 'Hoàn tất',
@@ -530,12 +654,17 @@
 	};
 
 	const getTypeColor = (typeId: number | string) => {
-		const map: Record<string, string> = { '1': 'success', '2': 'warning', '3': 'secondary' };
+		const map: Record<string, string> = { '1': 'success', '2': 'warning', '3': 'info', '4': 'secondary' };
 		return map[String(typeId)] || 'neutral';
 	};
 
 	const getTypeLabel = (typeId: number | string) => {
-		const map: Record<string, string> = { '1': 'Vận hành', '2': 'Thay đổi', '3': 'Phát triển' };
+		const map: Record<string, string> = {
+			'1': 'Xử lý vận hành',
+			'2': 'Thay đổi và tối ưu',
+			'3': 'Trích xuất dữ liệu',
+			'4': 'Phát triển tính năng',
+		};
 		return map[String(typeId)] || `Loại ${typeId}`;
 	};
 
@@ -554,11 +683,16 @@
 		return new Date(dateStr).toLocaleDateString('vi-VN', { day: '2-digit', month: '2-digit', year: 'numeric' });
 	};
 
+	const formatCost = (cost: number) => {
+		if (cost === 0) return 'Miễn phí';
+		return new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(cost);
+	};
+
 	// Action modal
 	const actionModalTitles: Record<string, string> = {
+		review: 'Xem xét & Estimate',
 		approve: 'Phê duyệt yêu cầu',
 		reject: 'Từ chối yêu cầu',
-		estimate: 'Báo estimate',
 		complete: 'Hoàn tất yêu cầu',
 		accept: 'Nghiệm thu yêu cầu',
 		cancel: 'Huỷ yêu cầu',
@@ -571,6 +705,8 @@
 		actionNote.value = '';
 		actionReason.value = '';
 		actionHours.value = '';
+		reviewDays.value = '';
+		reviewCost.value = '';
 		actionModalOpen.value = true;
 	};
 
@@ -602,9 +738,15 @@
 			errorToast({ title: 'Vui lòng nhập lý do' });
 			return;
 		}
-		if (action === 'estimate' && !actionHours.value) {
-			errorToast({ title: 'Vui lòng nhập số giờ estimate' });
-			return;
+		if (action === 'review') {
+			if (!reviewDays.value || Number(reviewDays.value) <= 0) {
+				errorToast({ title: 'Vui lòng nhập số ngày dự kiến' });
+				return;
+			}
+			if (reviewCost.value === '' || reviewCost.value === null) {
+				errorToast({ title: 'Vui lòng nhập chi phí dự kiến' });
+				return;
+			}
 		}
 
 		actionLoading.value = action;
@@ -617,8 +759,13 @@
 				case 'reject':
 					await $api.ticket.reject(id, actionReason.value);
 					break;
-				case 'estimate':
-					await $api.ticket.estimate(id, Number(actionHours.value), actionNote.value);
+				case 'review':
+					await $api.ticket.review(
+						id,
+						Number(reviewDays.value),
+						Number(reviewCost.value),
+						actionNote.value || undefined,
+					);
 					break;
 				case 'complete':
 					await $api.ticket.complete(id, actionNote.value);
@@ -701,15 +848,6 @@
 		}
 	};
 
-	const renderComment = (text: string): string => {
-		if (!text) return '';
-		return text
-			.replace(/&/g, '&amp;')
-			.replace(/</g, '&lt;')
-			.replace(/>/g, '&gt;')
-			.replace(/\n/g, '<br>')
-			.replace(/@\[([^\]]+)\]/g, '<span class="mention-tag">@$1</span>');
-	};
 	const fetchMentionUsers = async () => {
 		try {
 			const res = await $api.user.getMentionList();
@@ -721,23 +859,71 @@
 
 	const fetchComments = async () => {
 		try {
-			const res = (await $api.ticket.getComments(id)) as any;
-			comments.value = res?.data?.comments || res?.data || [];
+			const res = (await $api.ticket.getComments(id, 1, 10)) as any;
+			const items: any[] = res?.data || [];
+			commentTotal.value = res?.meta?.total ?? items.length;
+			commentPage.value = 1;
+			// Server trả về desc (mới nhất trước) — reverse để hiển thị cũ → mới (mới nhất ở dưới)
+			comments.value = [...items].reverse();
 		} catch {
 			// silently fail
 		}
 	};
 
+	const loadMoreComments = async () => {
+		if (loadingMoreComments.value || !commentHasMore.value) return;
+		loadingMoreComments.value = true;
+		const container = commentListRef.value;
+		const prevScrollHeight = container?.scrollHeight ?? 0;
+		try {
+			const nextPage = commentPage.value + 1;
+			const res = (await $api.ticket.getComments(id, nextPage, 10)) as any;
+			const items: any[] = res?.data || [];
+			commentTotal.value = res?.meta?.total ?? commentTotal.value;
+			commentPage.value = nextPage;
+			// Prepend older items (also reversed to asc)
+			comments.value = [...items].reverse().concat(comments.value);
+			// Restore scroll position so content doesn't jump
+			await nextTick();
+			if (container) {
+				container.scrollTop = container.scrollHeight - prevScrollHeight;
+			}
+		} catch {
+			// silently fail
+		} finally {
+			loadingMoreComments.value = false;
+		}
+	};
+
+	const onCommentScroll = (e: Event) => {
+		const el = e.target as HTMLElement;
+		if (el.scrollTop === 0 && commentHasMore.value && !loadingMoreComments.value) {
+			loadMoreComments();
+		}
+	};
+
+	const scrollCommentsToBottom = () => {
+		nextTick(() => {
+			const el = commentListRef.value;
+			if (el) el.scrollTop = el.scrollHeight;
+		});
+	};
+
 	const addComment = async () => {
 		if (!newComment.value.trim()) return;
 		addingComment.value = true;
+		const content = newComment.value.trim();
 		try {
-			await $api.ticket.addComment(id, newComment.value.trim());
+			await $api.ticket.addComment(id, content);
 			newComment.value = '';
-			await fetchComments();
-			// successToast({ title: 'Đã thêm bình luận' });
-		} catch (err: any) {
-			errorToast({ title: 'Lỗi', description: err?.data?.message || 'Không thể thêm bình luận' });
+			// Optimistically append then refresh total count
+			const res = (await $api.ticket.getComments(id, 1, 1)) as any;
+			commentTotal.value = res?.meta?.total ?? commentTotal.value + 1;
+			const newItem = res?.data?.[0];
+			if (newItem) comments.value.push(newItem);
+			scrollCommentsToBottom();
+		} catch (err: unknown) {
+			errorToast({ title: 'Lỗi', description: (err as any)?.data?.message || 'Không thể thêm bình luận' });
 		} finally {
 			addingComment.value = false;
 		}
@@ -745,5 +931,6 @@
 
 	onMounted(async () => {
 		await Promise.all([fetchTicket(), fetchComments(), fetchDepartments(), fetchMentionUsers()]);
+		scrollCommentsToBottom();
 	});
 </script>

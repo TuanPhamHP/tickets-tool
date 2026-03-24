@@ -108,6 +108,7 @@ export const formatDateTime = (dateStr: string) => {
 	if (!dateStr) return '-';
 
 	return new Date(dateStr).toLocaleString('vi-VN', {
+		timeZone: 'Asia/Ho_Chi_Minh',
 		day: '2-digit',
 		month: '2-digit',
 		year: 'numeric',
@@ -161,6 +162,7 @@ export function getHistoryLabel(str: string): string {
 		submitted: 'Gửi ticket',
 		started: 'Bắt đầu',
 		cancelled: 'Huỷ',
+		reviewed: 'Xem chi tiết và dự tính',
 	};
 
 	if (map[str]) return map[str];
@@ -171,4 +173,65 @@ export function getHistoryLabel(str: string): string {
 export function formatDescription(text: string): string {
 	if (!text) return '';
 	return text;
+}
+
+const TZ = 'Asia/Ho_Chi_Minh';
+
+function formatInTZ(date: Date, opts: Intl.DateTimeFormatOptions): string {
+	return new Intl.DateTimeFormat('en-CA', { timeZone: TZ, ...opts }).format(date);
+}
+
+/**
+ * Format thời gian theo khoảng cách:
+ * - Trong ngày: HH:mm (24h)
+ * - Hôm qua: HH:mm Hôm qua
+ * - Còn lại: HH:mm dd/mm/yyyy
+ */
+export function formatTimeWithGap(dateStr: string): string {
+	if (!dateStr) return '';
+	const date = new Date(dateStr);
+	const now = new Date();
+
+	const dateDay = formatInTZ(date, { year: 'numeric', month: '2-digit', day: '2-digit' });
+	const todayDay = formatInTZ(now, { year: 'numeric', month: '2-digit', day: '2-digit' });
+	const yesterdayDay = formatInTZ(new Date(now.getTime() - 86_400_000), { year: 'numeric', month: '2-digit', day: '2-digit' });
+
+	const hhmm = formatInTZ(date, { hour: '2-digit', minute: '2-digit', hour12: false });
+
+	if (dateDay === todayDay) return hhmm;
+	if (dateDay === yesterdayDay) return `${hhmm} Hôm qua`;
+
+	const [yyyy, mm, dd] = dateDay.split('-');
+	return `${hhmm} ${dd}/${mm}/${yyyy}`;
+}
+
+const URL_REGEX = /https?:\/\/[^\s<>"]+/g;
+
+export function renderComment(text: string): string {
+	if (!text) return '';
+
+	// Tách URL ra trước khi escape HTML để giữ nguyên URL gốc
+	const urls: string[] = [];
+	const withPlaceholders = text.replace(URL_REGEX, url => {
+		urls.push(url);
+		return `\x00URL${urls.length - 1}\x00`;
+	});
+
+	// Escape HTML
+	let html = withPlaceholders.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+
+	// Khôi phục URL thành thẻ <a>
+	html = html.replace(/\x00URL(\d+)\x00/g, (_, i) => {
+		const url = urls[Number(i)] ?? '';
+		const display = url.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+		return `<a href="${url}" target="_blank" rel="noopener noreferrer" class="comment-link">${display}</a>`;
+	});
+
+	// Xuống dòng → <br>
+	html = html.replace(/\n/g, '<br>');
+
+	// Mention @[Tên] → styled span
+	html = html.replace(/@\[([^\]]+)\]/g, '<span class="mention-tag">@$1</span>');
+
+	return html;
 }

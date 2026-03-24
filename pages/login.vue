@@ -15,17 +15,17 @@
 						</UFormField>
 
 						<div>
-							<!-- <div class="mb-4 text-sm leading-6">
-								<input v-model="rememberMe" id="rememberMe" name="rememberMe" type="checkbox"
-									class="appearance-none hidden h-0" />
-								<label for="rememberMe" class="font-mediumcursor-pointer flex gap-[8px] items-center">
-									<Icon v-show="rememberMe" name="fluent:checkbox-checked-20-filled" size="24px"
-										class="rouned m-0 p-0" />
-									<Icon v-show="!rememberMe" name="fluent:checkbox-unchecked-20-regular" size="24px"
-										class="rouned m-0 p-0 " />
-									Ghi nhớ
+							<div class="mb-4 flex items-center gap-2">
+								<input
+									v-model="rememberMe"
+									id="rememberMe"
+									type="checkbox"
+									class="w-4 h-4 accent-primary cursor-pointer"
+								/>
+								<label for="rememberMe" class="text-sm text-gray-600 cursor-pointer select-none">
+									Duy trì đăng nhập (30 ngày)
 								</label>
-							</div> -->
+							</div>
 							<UButton
 								as="button"
 								:loading="loading"
@@ -67,9 +67,9 @@
 				},
 			});
 			const authStore = useAuthStore();
-			const { $api } = useNuxtApp();
+			const { $api } = useNuxtApp() as ReturnType<typeof useNuxtApp> & { $api: Record<string, any> };
 			const router = useRouter();
-			const rememberMe = ref<Boolean>(true);
+			const rememberMe = ref<boolean>(false);
 			const CookieOptions: CookieOptions = { maxAge: 30 * 24 * 60 * 60, sameSite: 'lax' };
 			const authCookie = useCookie('auth-token', CookieOptions);
 
@@ -153,6 +153,7 @@
 				const body = {
 					login: this.login,
 					password: this.password,
+					rememberMe: this.rememberMe,
 				};
 
 				this.loading = true;
@@ -168,7 +169,9 @@
 
 							authStore.setUser({ ...user, name: user.name, id: user.id, token });
 							authStore.setToken(token);
-							this.authCookie = token;
+							if (this.rememberMe) {
+								this.authCookie = token;
+							}
 							authStore.getUserInfo();
 							this.loginErrorMsg = '';
 

@@ -19,6 +19,7 @@ export default defineEventHandler(async (event) => {
 		.set({
 			name: body.name ?? dept.name,
 			company: body.company ?? dept.company,
+			description: body.description !== undefined ? body.description : dept.description,
 			updatedAt: new Date(),
 		})
 		.where(eq(departments.id, id));

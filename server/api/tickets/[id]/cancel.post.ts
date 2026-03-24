@@ -24,7 +24,7 @@ export default defineEventHandler(async (event) => {
 		throw createError({ statusCode: 403, statusMessage: 'Bạn không có quyền huỷ yêu cầu này' });
 	}
 
-	const cancellableStatuses = ['draft', 'pending_approval', 'approved', 'rejected'];
+	const cancellableStatuses = ['draft', 'pending_review', 'pending_approval', 'approved', 'rejected'];
 	if (!cancellableStatuses.includes(ticket.status)) {
 		throw createError({ statusCode: 400, statusMessage: 'Không thể huỷ yêu cầu đang hoặc đã thực hiện' });
 	}

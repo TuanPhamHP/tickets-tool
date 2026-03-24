@@ -14,6 +14,7 @@ export default defineEventHandler(async (event) => {
 	const deptInsert = await db.insert(departments).values({
 		name: body.name,
 		company: body.company ?? 'Xuân Cương',
+		description: body.description ?? null,
 	});
 	const [dept] = await db.select().from(departments).where(eq(departments.id, deptInsert[0].insertId));
 

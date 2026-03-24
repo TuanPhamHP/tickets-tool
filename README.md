@@ -1,73 +1,78 @@
-# bai-xe-83
+# XC-Tickets
 
-# Nuxt Minimal Starter
+Hệ thống quản lý yêu cầu công việc (ticket) giữa **Xuân Cương** và **Công ty Cổ phần Giải pháp 8 Giờ**.
 
-Look at the [Nuxt documentation](https://nuxt.com/docs/getting-started/introduction) to learn more.
-
-## Setup
-
-Make sure to install dependencies:
+## Cài đặt
 
 ```bash
-# npm
-npm install
-
-# pnpm
-pnpm install
-
-# yarn
 yarn install
-
-# bun
-bun install
 ```
 
-## Development Server
-
-Start the development server on `http://localhost:3000`:
+## Chạy dev
 
 ```bash
-# npm
-npm run dev
-
-# pnpm
-pnpm dev
-
-# yarn
 yarn dev
-
-# bun
-bun run dev
 ```
 
-## Production
+## Database
 
-Cấu trúc server hoàn chỉnh
+```bash
+yarn db:push      # Sync schema lên DB (dev only)
+yarn db:studio    # Mở Drizzle Studio
+```
 
-server/ database/ schema.ts ← Drizzle schema: 6 bảng SQLite utils/ db.ts ← Kết nối DB + auto-migrate + generateTicketCode() auth.ts ← JWT sign/verify, requireAuth(), requireRole() response.ts ← apiSuccess(), apiPaginated(), getPagination() middleware/ auth.ts ← Populate event.context.user từ JWT api/ auth/ login · logout · me · change-password tickets/ CRUD + 7 workflow actions + comments departments/ CRUD users/ CRUD stats/ Dashboard counts seed.post.ts ← Seed dữ liệu mẫu REST API Endpoints Endpoint Mô tả POST /api/auth/login Đăng nhập, trả JWT GET /api/auth/me Thông tin user hiện tại POST /api/tickets Tạo yêu cầu mới GET /api/tickets Danh sách (filter by role tự động) POST /api/tickets/:id/submit Nộp yêu cầu POST /api/tickets/:id/approve Phê duyệt (approver) POST /api/tickets/:id/reject Từ chối (approver) POST /api/tickets/:id/estimate Báo estimate (implementer) POST /api/tickets/:id/start Bắt đầu thực hiện POST /api/tickets/:id/complete Hoàn tất bàn giao POST /api/tickets/:id/accept Nghiệm thu (requester) GET /api/stats Thống kê dashboard Để chạy
+## Seed dữ liệu mẫu
 
-# Dev server
-
-yarn dev
-
-# Seed dữ liệu mẫu (POST lần đầu)
-
+```bash
 curl -X POST http://localhost:3000/api/seed
+```
 
-# Tài khoản mẫu
+> Chỉ chạy được khi DB chưa có user nào, hoặc đăng nhập bằng tài khoản admin.
 
-# admin@xuancuong.vn / Admin@123
+## Tài khoản mẫu
 
-# tgd@xuancuong.vn / User@123 (approver)
+### Admin
 
-# kd@xuancuong.vn / User@123 (requester)
+| Email | Mật khẩu | Role |
+|---|---|---|
+| `admin@xuancuong.vn` | `Admin@123` | admin |
 
-# dev@8gio.vn / User@123 (implementer)
+### Approver (Phê duyệt)
 
-Luồng quy trình theo diagram Type 1 (Hỗ trợ vận hành): draft → approved (tự động, không cần phê duyệt) → in_progress → completed → accepted Type 2, 3: draft → pending_approval → approved/rejected → in_progress → completed → accepted
+| Email | Mật khẩu | Phòng ban |
+|---|---|---|
+| `tgd@xuancuong.vn` | `User@123` | Ban Giám Đốc |
 
-## Migrate db
+### Requester (Yêu cầu)
+
+| Email | Mật khẩu | Phòng ban |
+|---|---|---|
+| `kd@xuancuong.vn` | `User@123` | Phòng Kinh Doanh |
+| `ketoan@xuancuong.vn` | `User@123` | Phòng Kế Toán |
+| `giaodich@xuancuong.vn` | `User@123` | Phòng Giao Dịch |
+| `cskh@xuancuong.vn` | `User@123` | Phòng Chăm Sóc Khách Hàng |
+
+### Implementer (Thực hiện)
+
+| Email | Mật khẩu | Công ty |
+|---|---|---|
+| `dev@8gio.vn` | `User@123` | Công ty Cổ phần Giải pháp 8 Giờ |
+
+## Luồng xử lý ticket
+
+| Loại | Tên | Luồng |
+|---|---|---|
+| Type 1 | Xử lý vận hành | `draft → pending_review → approved → in_progress → completed → accepted` |
+| Type 2 | Thay đổi & Tối ưu | `draft → pending_review → pending_approval → approved → in_progress → completed → accepted` |
+| Type 3 | Trích xuất dữ liệu | (như type 2) |
+| Type 4 | Phát triển tính năng | (như type 2) |
+
+> Ticket có thể bị `cancelled` từ: `draft`, `pending_review`, `pending_approval`, `approved`, `rejected`.
+> Ticket bị `rejected` có thể resubmit.
+
+## Migrate DB (production)
 
 ```bash
-yarn db:push
+yarn db:generate   # Tạo migration files từ schema
+yarn db:push       # Áp dụng trực tiếp (dev only)
 ```

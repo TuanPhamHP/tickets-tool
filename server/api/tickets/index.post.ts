@@ -11,15 +11,15 @@ export default defineEventHandler(async event => {
 	const body = await readBody(event);
 
 	if (!body?.title) throw createError({ statusCode: 400, statusMessage: 'Tiêu đề yêu cầu là bắt buộc' });
-	if (!body?.type || ![1, 2, 3].includes(Number(body.type))) {
-		throw createError({ statusCode: 400, statusMessage: 'Loại yêu cầu phải là 1, 2 hoặc 3' });
+	if (!body?.type || ![1, 2, 3, 4].includes(Number(body.type))) {
+		throw createError({ statusCode: 400, statusMessage: 'Loại yêu cầu phải là 1, 2, 3 hoặc 4' });
 	}
 
 	const db = useDB();
 	const code = await generateTicketCode();
 
-	// Type 1 (Hỗ trợ vận hành) → không cần phê duyệt → thẳng vào pending cho implementer
-	const initialStatus = Number(body.type) === 1 ? 'approved' : 'draft';
+	// Tất cả loại đều bắt đầu từ draft — luồng: draft → submit → pending_review → ...
+	const initialStatus = 'draft' as const;
 
 	const insertResult = await db.insert(tickets).values({
 		code,

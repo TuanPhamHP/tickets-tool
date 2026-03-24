@@ -16,6 +16,7 @@ export const departments = mysqlTable('departments', {
 	id: int('id').autoincrement().primaryKey(),
 	name: varchar('name', { length: 255 }).notNull(),
 	company: varchar('company', { length: 255 }).notNull().default('Xuân Cương'),
+	description: text('description'),
 	createdAt: timestamp('created_at').notNull().defaultNow(),
 	updatedAt: timestamp('updated_at').notNull().defaultNow().onUpdateNow(),
 });
@@ -41,6 +42,7 @@ export const users = mysqlTable(
 		phone: varchar('phone', { length: 20 }),
 		avatar: varchar('avatar', { length: 500 }),
 		isActive: boolean('is_active').notNull().default(true),
+		telegramId: varchar('telegram_id', { length: 255 }),
 		createdAt: timestamp('created_at').notNull().defaultNow(),
 		updatedAt: timestamp('updated_at').notNull().defaultNow().onUpdateNow(),
 	},
@@ -52,19 +54,16 @@ export const users = mysqlTable(
 // ─── TICKETS ────────────────────────────────────────────────────────────────
 /**
  * type:
- *   1 - Hỗ trợ vận hành  → KHÔNG CẦN PHÊ DUYỆT
- *   2 - Thay đổi & Tối ưu → CẦN PHÊ DUYỆT
- *   3 - Phát triển mới    → CẦN PHÊ DUYỆT
+ *   1 - Xử lý vận hành              → Sau review: tự động approved (không qua phê duyệt)
+ *   2 - Thay đổi & Tối ưu           → Sau review: cần phê duyệt (pending_approval)
+ *   3 - Trích xuất dữ liệu          → Sau review: cần phê duyệt (pending_approval)
+ *   4 - Phát triển tính năng mới    → Sau review: cần phê duyệt (pending_approval)
  *
- * status:
- *   draft            - bản nháp
- *   pending_approval - chờ phê duyệt  (type 2, 3)
- *   approved         - đã phê duyệt
- *   rejected         - từ chối
- *   in_progress      - đang thực hiện
- *   completed        - đã hoàn tất (implementer)
- *   accepted         - đã nghiệm thu (requester)
- *   cancelled        - đã huỷ
+ * status flow:
+ *   draft → pending_review → pending_approval → approved → in_progress → completed → accepted
+ *                          ↗ (type 1: skip pending_approval, sang approved thẳng)
+ *                                             ↘ rejected (→ có thể resubmit)
+ *   cancelled: có thể huỷ từ draft, pending_review, pending_approval, approved, rejected
  */
 export const tickets = mysqlTable(
 	'tickets',
@@ -73,8 +72,8 @@ export const tickets = mysqlTable(
 		code: varchar('code', { length: 30 }).notNull(),
 		title: varchar('title', { length: 500 }).notNull(),
 		description: text('description'),
-		type: int('type').notNull(), // 1 | 2 | 3
-		status: mysqlEnum('status', ['draft', 'pending_approval', 'approved', 'rejected', 'in_progress', 'completed', 'accepted', 'cancelled'])
+		type: int('type').notNull(), // 1 | 2 | 3 | 4
+		status: mysqlEnum('status', ['draft', 'pending_review', 'pending_approval', 'approved', 'rejected', 'in_progress', 'completed', 'accepted', 'cancelled'])
 			.notNull()
 			.default('draft'),
 		priority: mysqlEnum('priority', ['low', 'medium', 'high', 'urgent']).notNull().default('medium'),
@@ -84,17 +83,21 @@ export const tickets = mysqlTable(
 		departmentId: int('department_id').references(() => departments.id),
 		approverId: int('approver_id').references(() => users.id),
 		implementerId: int('implementer_id').references(() => users.id),
+		reviewerId: int('reviewer_id').references(() => users.id),
 
-		// approval
+		// tech review & estimate (set by implementer at pending_review stage)
+		estimateDays: float('estimate_days'),
+		estimateCost: float('estimate_cost'), // chỉ approver/admin được xem
+		estimateNote: text('estimate_note'),
+		reviewedAt: timestamp('reviewed_at'),
+
+		// approval (set by approver at pending_approval stage)
 		approvalNote: text('approval_note'),
 		approvedAt: timestamp('approved_at'),
 		rejectedAt: timestamp('rejected_at'),
 		rejectionReason: text('rejection_reason'),
 
 		// implementation
-		estimateHours: float('estimate_hours'),
-		estimateNote: text('estimate_note'),
-		estimatedAt: timestamp('estimated_at'),
 		startedAt: timestamp('started_at'),
 		completedAt: timestamp('completed_at'),
 		implementationNote: text('implementation_note'),

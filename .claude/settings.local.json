@@ -3,7 +3,18 @@
     "allow": [
       "Bash(node -e \":*)",
       "Bash(node:*)",
-      "Bash(ls t:/my-gitlab/xuan-cuong/xc-tickets/server/api/tickets/[id]/)"
+      "Bash(ls t:/my-gitlab/xuan-cuong/xc-tickets/server/api/tickets/[id]/)",
+      "Bash(find t:my-gitlabxuan-cuongxc-tickets -name schema* -type f)",
+      "Bash(find t:my-gitlabxuan-cuongxc-tickets -path */database/* -name *.ts -type f)",
+      "Bash(find t:my-gitlabxuan-cuongxc-tickets -path */server/* -name *.ts -type f)",
+      "Bash(python3 -c \":*)",
+      "Bash(cat -A t:my-gitlabxuan-cuongxc-ticketspagestickets[id].vue)",
+      "Bash(python3 -:*)",
+      "Bash(yarn db:push)",
+      "Bash(yarn drizzle-kit:*)",
+      "Bash(curl -s -X POST http://localhost:3000/api/seed)",
+      "Bash(curl -s -X POST http://localhost:3000/api/seed -w \"\\\\n%{http_code}\")",
+      "Bash(curl -s -X POST http://localhost:3000/api/seed -H \"Content-Type: application/json\" -w \"\\\\n%{http_code}\")"
     ]
   }
 }

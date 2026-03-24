@@ -9,8 +9,10 @@
 		"preview": "nuxt preview",
 		"postinstall": "nuxt prepare",
 		"db:generate": "drizzle-kit generate",
-		"db:push": "drizzle-kit push",
-		"db:studio": "drizzle-kit studio"
+		"db:push": "echo 'ERROR: Dùng db:migrate thay vì db:push. Xem docs/database.md' && exit 1",
+		"db:studio": "drizzle-kit studio",
+		"db:reset": "echo 'ERROR: KHÔNG dùng db:reset trên staging/production. Xem docs/database.md' && exit 1",
+		"db:migrate": "drizzle-kit migrate"
 	},
 	"dependencies": {
 		"@nuxt/eslint": "1.2.0",

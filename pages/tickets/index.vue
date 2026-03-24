@@ -158,7 +158,8 @@
 	const statusTabs = [
 		{ value: 'all', label: 'Tất cả' },
 		{ value: 'draft', label: 'Nháp' },
-		{ value: 'pending_approval', label: 'Chờ duyệt' },
+		{ value: 'pending_review', label: 'Chờ tech xem xét' },
+		{ value: 'pending_approval', label: 'Chờ phê duyệt' },
 		{ value: 'approved', label: 'Đã duyệt' },
 		{ value: 'in_progress', label: 'Đang thực hiện' },
 		{ value: 'completed', label: 'Hoàn tất' },
@@ -168,9 +169,10 @@
 
 	const typeOptions = [
 		{ label: 'Tất cả loại', value: null },
-		{ label: 'Vận hành', value: '1' },
-		{ label: 'Thay đổi', value: '2' },
-		{ label: 'Phát triển', value: '3' },
+		{ label: 'Xử lý vận hành', value: '1' },
+		{ label: 'Thay đổi và tối ưu', value: '2' },
+		{ label: 'Trích xuất dữ liệu', value: '3' },
+		{ label: 'Phát triển tính năng mới', value: '4' },
 	];
 
 	// Table columns
@@ -189,12 +191,14 @@
 	const getStatusColor = (status: string) => {
 		const map: Record<string, string> = {
 			draft: 'neutral',
+			pending_review: 'info',
 			pending_approval: 'warning',
-			approved: 'info',
+			approved: 'success',
 			in_progress: 'warning',
 			completed: 'success',
 			accepted: 'success',
 			rejected: 'error',
+			cancelled: 'error',
 		};
 		return map[status] || 'neutral';
 	};
@@ -202,12 +206,14 @@
 	const getStatusLabel = (status: string) => {
 		const map: Record<string, string> = {
 			draft: 'Nháp',
-			pending_approval: 'Chờ duyệt',
+			pending_review: 'Chờ tech xem xét',
+			pending_approval: 'Chờ phê duyệt',
 			approved: 'Đã duyệt',
 			in_progress: 'Đang thực hiện',
 			completed: 'Hoàn tất',
 			accepted: 'Đã nghiệm thu',
 			rejected: 'Từ chối',
+			cancelled: 'Đã huỷ',
 		};
 		return map[status] || status;
 	};
@@ -216,16 +222,18 @@
 		const map: Record<string, string> = {
 			'1': 'success',
 			'2': 'warning',
-			'3': 'secondary',
+			'3': 'info',
+			'4': 'secondary',
 		};
 		return map[String(typeId)] || 'neutral';
 	};
 
 	const getTypeLabel = (typeId: number | string) => {
 		const map: Record<string, string> = {
-			'1': 'Vận hành',
-			'2': 'Thay đổi',
-			'3': 'Phát triển',
+			'1': 'Xử lý vận hành',
+			'2': 'Thay đổi và tối ưu',
+			'3': 'Trích xuất dữ liệu',
+			'4': 'Phát triển tính năng',
 		};
 		return map[String(typeId)] || `Loại ${typeId}`;
 	};

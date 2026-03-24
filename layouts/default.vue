@@ -48,7 +48,7 @@
 					/>
 
 					<!-- Admin section -->
-					<template v-if="isAdmin">
+					<template v-if="isAdminOrApprover">
 						<div
 							v-show="!appStateStore.sideBarMini"
 							class="px-3 pt-4 pb-1"
@@ -67,6 +67,7 @@
 							:active="isActive('/admin/departments')"
 						/>
 						<NavItem
+							v-if="isAdmin"
 							to="/admin/users"
 							icon="i-heroicons-users"
 							label="Nhân sự"
@@ -78,28 +79,37 @@
 
 				<!-- Bottom user section -->
 				<div class="border-t border-white/20 p-2">
-					<button
+					<div
 						:class="[
-							'w-full flex items-center rounded-lg transition-colors duration-150 hover:bg-red-500/20 group',
-							appStateStore.sideBarMini ? 'justify-center p-2' : 'gap-3 px-3 py-2.5',
+							'flex items-center',
+							appStateStore.sideBarMini ? 'justify-center' : 'gap-1',
 						]"
-						@click="handleLogout"
 					>
-						<div
-							class="w-8 h-8 rounded-full bg-white/20 flex items-center justify-center flex-shrink-0 text-white text-xs font-bold"
+						<!-- Avatar + Name → opens profile -->
+						<button
+							:class="[
+								'flex items-center rounded-lg transition-colors duration-150 hover:bg-white/10',
+								appStateStore.sideBarMini ? 'p-2' : 'flex-1 gap-3 px-3 py-2.5 min-w-0',
+							]"
+							@click="profileOpen = true"
 						>
-							{{ userInitial }}
-						</div>
-						<div v-show="!appStateStore.sideBarMini" class="flex-1 min-w-0 text-left overflow-hidden">
-							<p class="text-white text-sm font-medium truncate">{{ user?.name }}</p>
-							<p class="text-green-200 text-xs truncate">{{ roleLabel }}</p>
-						</div>
-						<UIcon
+							<div class="w-8 h-8 rounded-full bg-white/20 flex items-center justify-center flex-shrink-0 text-white text-xs font-bold">
+								{{ userInitial }}
+							</div>
+							<div v-show="!appStateStore.sideBarMini" class="flex-1 min-w-0 text-left overflow-hidden">
+								<p class="text-white text-sm font-medium truncate">{{ user?.name }}</p>
+								<p class="text-green-200 text-xs truncate">{{ roleLabel }}</p>
+							</div>
+						</button>
+						<!-- Logout icon (full mode only) -->
+						<button
 							v-show="!appStateStore.sideBarMini"
-							name="i-heroicons-arrow-right-on-rectangle"
-							class="text-white/50 group-hover:text-red-300 text-base flex-shrink-0 transition-colors"
-						/>
-					</button>
+							class="p-2 rounded-lg text-white/50 hover:text-red-300 hover:bg-red-500/20 transition-colors flex-shrink-0"
+							@click="handleLogout"
+						>
+							<UIcon name="i-heroicons-arrow-right-on-rectangle" class="text-base" />
+						</button>
+					</div>
 				</div>
 			</aside>
 
@@ -132,7 +142,10 @@
 					<!-- User pill + logout -->
 					<div class="flex items-center gap-2">
 						<NotificationPanel />
-						<div class="hidden sm:flex items-center gap-2 bg-gradient-to-r from-green-700 to-green-500 rounded-full px-3 py-1.5">
+						<button
+							class="hidden sm:flex items-center gap-2 bg-gradient-to-r from-green-700 to-green-500 rounded-full px-3 py-1.5 hover:opacity-90 transition-opacity"
+							@click="profileOpen = true"
+						>
 							<div
 								class="w-6 h-6 rounded-full bg-white/20 flex items-center justify-center text-white text-xs font-bold flex-shrink-0"
 							>
@@ -142,7 +155,7 @@
 								<p class="text-white text-xs font-medium whitespace-nowrap">{{ user?.name }}</p>
 								<p class="text-green-200 text-[10px] whitespace-nowrap">{{ roleLabel }}</p>
 							</div>
-						</div>
+						</button>
 						<UButton
 							variant="ghost"
 							color="error"
@@ -161,6 +174,7 @@
 				</main>
 			</div>
 		</div>
+		<ProfileModal v-model:open="profileOpen" />
 	</UApp>
 </template>
 
@@ -178,6 +192,7 @@ const router = useRouter();
 const route = useRoute();
 
 const mobileOpen = ref(false);
+const profileOpen = ref(false);
 
 // Poll unread count every 30 seconds
 let pollTimer: ReturnType<typeof setInterval> | null = null;
@@ -210,6 +225,7 @@ const toggleSidebar = () => appStateStore.toggleSidebar();
 
 // Computed
 const isAdmin = computed(() => (user.value as any)?.role === 'admin');
+const isAdminOrApprover = computed(() => ['admin', 'approver'].includes((user.value as any)?.role));
 
 const roleLabel = computed(() => {
 	const roleMap: Record<string, string> = {

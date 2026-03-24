@@ -46,7 +46,10 @@
 		{ placeholder: 'Viết bình luận...', rows: 2, users: () => [] },
 	);
 
-	const emit = defineEmits<{ 'update:modelValue': [value: string] }>();
+	const emit = defineEmits<{
+		'update:modelValue': [value: string];
+		'submit': [];
+	}>();
 
 	const textareaRef = ref<HTMLTextAreaElement | null>(null);
 	const showDropdown = ref(false);
@@ -85,6 +88,22 @@
 	};
 
 	const onKeydown = (e: KeyboardEvent) => {
+		if (e.key === 'Enter') {
+			// Mention dropdown open → select item
+			if (showDropdown.value && filteredUsers.value.length > 0) {
+				e.preventDefault();
+				const user = filteredUsers.value[activeIdx.value];
+				if (user) selectUser(user);
+				return;
+			}
+			// Shift+Enter → new line (default behavior)
+			if (e.shiftKey) return;
+			// Plain Enter → submit
+			e.preventDefault();
+			emit('submit');
+			return;
+		}
+
 		if (!showDropdown.value || filteredUsers.value.length === 0) return;
 
 		if (e.key === 'ArrowDown') {
@@ -93,7 +112,7 @@
 		} else if (e.key === 'ArrowUp') {
 			e.preventDefault();
 			activeIdx.value = (activeIdx.value - 1 + filteredUsers.value.length) % filteredUsers.value.length;
-		} else if (e.key === 'Enter' || e.key === 'Tab') {
+		} else if (e.key === 'Tab') {
 			e.preventDefault();
 			selectUser(filteredUsers.value[activeIdx.value]);
 		} else if (e.key === 'Escape') {

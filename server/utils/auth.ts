@@ -13,11 +13,11 @@ function getSecret() {
 	return new TextEncoder().encode(config.jwtSecret || 'xc-ticket-secret-key-2025');
 }
 
-export async function signToken(payload: JwtPayload): Promise<string> {
+export async function signToken(payload: JwtPayload, expiresIn: '7d' | '30d' = '7d'): Promise<string> {
 	return new SignJWT({ ...payload })
 		.setProtectedHeader({ alg: 'HS256' })
 		.setIssuedAt()
-		.setExpirationTime('7d')
+		.setExpirationTime(expiresIn)
 		.sign(getSecret());
 }
 

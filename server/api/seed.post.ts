@@ -27,6 +27,8 @@ export default defineEventHandler(async event => {
 		{ name: 'Phòng Kho', company: 'Xuân Cương' },
 		{ name: 'Phòng IT', company: 'Xuân Cương' },
 		{ name: 'Phòng Nhân Sự', company: 'Xuân Cương' },
+		{ name: 'Phòng Giao Dịch', company: 'Xuân Cương' },
+		{ name: 'Phòng Chăm Sóc Khách Hàng', company: 'Xuân Cương' },
 		{ name: 'Trung tâm công nghệ', company: 'Công ty Cổ phần Giải pháp 8 Giờ' },
 	];
 
@@ -38,6 +40,9 @@ export default defineEventHandler(async event => {
 	const itDept = insertedDepts.find(d => d.name === 'Phòng IT')!;
 	const devDept = insertedDepts.find(d => d.name === 'Trung tâm công nghệ')!;
 	const kdDept = insertedDepts.find(d => d.name === 'Phòng Kinh Doanh')!;
+	const ktDept = insertedDepts.find(d => d.name === 'Phòng Kế Toán')!;
+	const gdDept = insertedDepts.find(d => d.name === 'Phòng Giao Dịch')!;
+	const cskhDept = insertedDepts.find(d => d.name === 'Phòng Chăm Sóc Khách Hàng')!;
 
 	// Seed users
 	const hashedAdmin = await bcrypt.hash('Admin@123', 12);
@@ -79,6 +84,33 @@ export default defineEventHandler(async event => {
 			departmentId: devDept.id,
 			company: 'Công ty Cổ phần Giải pháp 8 Giờ',
 			phone: '0901000004',
+		},
+		{
+			name: 'Trưởng Phòng Kế Toán',
+			email: 'ketoan@xuancuong.vn',
+			passwordHash: hashedUser,
+			role: 'requester' as const,
+			departmentId: ktDept.id,
+			company: 'Xuân Cương',
+			phone: '0901000005',
+		},
+		{
+			name: 'Trưởng Phòng Giao Dịch',
+			email: 'giaodich@xuancuong.vn',
+			passwordHash: hashedUser,
+			role: 'requester' as const,
+			departmentId: gdDept.id,
+			company: 'Xuân Cương',
+			phone: '0901000006',
+		},
+		{
+			name: 'Trưởng Phòng Chăm Sóc Khách Hàng',
+			email: 'cskh@xuancuong.vn',
+			passwordHash: hashedUser,
+			role: 'requester' as const,
+			departmentId: cskhDept.id,
+			company: 'Xuân Cương',
+			phone: '0901000007',
 		},
 	];
 

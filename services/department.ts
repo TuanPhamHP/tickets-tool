@@ -9,6 +9,12 @@ const base = (_baseUrl: string) => {
 	});
 
 	return {
+		getById(id: number): Promise<apiResponde> {
+			return $fetch(`/api/departments/${id}`, {
+				method: 'GET',
+				headers: getHeaders(),
+			});
+		},
 		getList(params?: Record<string, any>): Promise<apiResponde> {
 			return $fetch('/api/departments', {
 				method: 'GET',

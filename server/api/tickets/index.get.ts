@@ -22,7 +22,7 @@ export default defineEventHandler(async (event) => {
 	}
 	else if (auth.role === 'implementer') {
 		conditions.push(
-			sql`(${tickets.implementerId} = ${Number(auth.sub)} OR ${tickets.status} IN ('approved','in_progress','completed'))`,
+			sql`(${tickets.implementerId} = ${Number(auth.sub)} OR ${tickets.status} IN ('pending_review','approved','in_progress','completed'))`,
 		);
 	}
 
