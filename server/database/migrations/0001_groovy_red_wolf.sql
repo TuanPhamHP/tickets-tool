@@ -1,0 +1,1 @@
+ALTER TABLE `tickets` ADD `platform_ids` json;

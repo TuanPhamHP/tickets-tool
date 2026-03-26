@@ -7,6 +7,7 @@ import {
 	timestamp,
 	float,
 	mysqlEnum,
+	json,
 	index,
 	uniqueIndex,
 } from 'drizzle-orm/mysql-core';
@@ -60,10 +61,10 @@ export const users = mysqlTable(
  *   4 - Phát triển tính năng mới    → Sau review: cần phê duyệt (pending_approval)
  *
  * status flow:
- *   draft → pending_review → pending_approval → approved → in_progress → completed → accepted
- *                          ↗ (type 1: skip pending_approval, sang approved thẳng)
- *                                             ↘ rejected (→ có thể resubmit)
- *   cancelled: có thể huỷ từ draft, pending_review, pending_approval, approved, rejected
+ *   draft → pending_review → in_review → pending_approval → approved → in_progress → completed → accepted
+ *                 (tiếp nhận↗)  (BA xong↗, type 1: skip pending_approval → approved thẳng)
+ *                               (BA từ chối↘ rejected → requester sửa và resubmit)
+ *   cancelled: có thể huỷ từ draft, pending_review, in_review, pending_approval, approved, rejected
  */
 export const tickets = mysqlTable(
 	'tickets',
@@ -73,7 +74,7 @@ export const tickets = mysqlTable(
 		title: varchar('title', { length: 500 }).notNull(),
 		description: text('description'),
 		type: int('type').notNull(), // 1 | 2 | 3 | 4
-		status: mysqlEnum('status', ['draft', 'pending_review', 'pending_approval', 'approved', 'rejected', 'in_progress', 'completed', 'accepted', 'cancelled'])
+		status: mysqlEnum('status', ['draft', 'pending_review', 'in_review', 'pending_approval', 'approved', 'rejected', 'in_progress', 'completed', 'accepted', 'cancelled'])
 			.notNull()
 			.default('draft'),
 		priority: mysqlEnum('priority', ['low', 'medium', 'high', 'urgent']).notNull().default('medium'),
@@ -85,10 +86,12 @@ export const tickets = mysqlTable(
 		implementerId: int('implementer_id').references(() => users.id),
 		reviewerId: int('reviewer_id').references(() => users.id),
 
-		// tech review & estimate (set by implementer at pending_review stage)
+		// tech review & estimate (set by implementer at pending_review → in_review stage)
+		receivedAt: timestamp('received_at'),        // thời điểm implementer tiếp nhận (→ in_review)
 		estimateDays: float('estimate_days'),
-		estimateCost: float('estimate_cost'), // chỉ approver/admin được xem
+		estimateCost: float('estimate_cost'),         // chỉ approver/admin được xem
 		estimateNote: text('estimate_note'),
+		estimateStartDate: timestamp('estimate_start_date'), // ngày dự kiến bắt đầu thực hiện
 		reviewedAt: timestamp('reviewed_at'),
 
 		// approval (set by approver at pending_approval stage)
@@ -110,6 +113,7 @@ export const tickets = mysqlTable(
 		cancelledAt: timestamp('cancelled_at'),
 		cancelReason: text('cancel_reason'),
 
+		platformIds: json('platform_ids').$type<string[]>(),
 		deadline: timestamp('deadline'),
 		createdAt: timestamp('created_at').notNull().defaultNow(),
 		updatedAt: timestamp('updated_at').notNull().defaultNow().onUpdateNow(),

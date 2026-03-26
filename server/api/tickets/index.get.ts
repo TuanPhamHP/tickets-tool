@@ -16,9 +16,8 @@ export default defineEventHandler(async (event) => {
 		conditions.push(eq(tickets.requesterId, Number(auth.sub)));
 	}
 	else if (auth.role === 'approver') {
-		conditions.push(
-			sql`(${tickets.approverId} = ${Number(auth.sub)} OR ${tickets.status} IN ('pending_approval'))`,
-		);
+		// TGĐ thấy toàn bộ ticket — kể cả đang chờ công nghệ xem xét hoặc đã bị từ chối
+		// (không cần filter thêm, để trống = thấy tất cả)
 	}
 	else if (auth.role === 'implementer') {
 		conditions.push(

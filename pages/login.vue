@@ -29,7 +29,7 @@
 							<UButton
 								as="button"
 								:loading="loading"
-								class="hidden lg:flex cursor-pointer text-white items-center justify-center min-w-[150px] gap-2 px-4 py-3 rounded-md bg-primary-gradient text-sm whitespace-nowrap w-full"
+								class="flex cursor-pointer text-white items-center justify-center min-w-[150px] gap-2 px-4 py-3 rounded-md bg-primary-gradient text-sm whitespace-nowrap w-full"
 								type="submit"
 								trailing
 								:size="'xl'"
@@ -40,6 +40,66 @@
 							<p v-if="loginErrorMsg" class="mt-2 text-sm text-red-500 text-center" id="email-error">
 								{{ loginErrorMsg }}
 							</p>
+						</div>
+
+						<!-- Quick login (test only) -->
+						<div class="mt-5 pt-4 border-t border-gray-100">
+							<p class="text-xs text-gray-400 text-center mb-3">⚡ Đăng nhập nhanh</p>
+							<div class="space-y-2">
+								<div class="flex gap-2 flex-wrap justify-center">
+									<button
+										type="button"
+										@click="quickLogin('admin@xuancuong.vn', 'Admin@123')"
+										class="px-2.5 py-1 text-xs rounded-md bg-purple-100 text-purple-700 hover:bg-purple-200 transition-colors font-medium"
+									>
+										Admin
+									</button>
+									<button
+										type="button"
+										@click="quickLogin('tgd@xuancuong.vn', 'User@123')"
+										class="px-2.5 py-1 text-xs rounded-md bg-amber-100 text-amber-700 hover:bg-amber-200 transition-colors font-medium"
+									>
+										TGĐ
+									</button>
+									<button
+										type="button"
+										@click="quickLogin('dev@8gio.vn', 'User@123')"
+										class="px-2.5 py-1 text-xs rounded-md bg-cyan-100 text-cyan-700 hover:bg-cyan-200 transition-colors font-medium"
+									>
+										Dev 8 Giờ
+									</button>
+								</div>
+								<div class="flex gap-2 flex-wrap justify-center">
+									<button
+										type="button"
+										@click="quickLogin('kd@xuancuong.vn', 'User@123')"
+										class="px-2.5 py-1 text-xs rounded-md bg-blue-100 text-blue-700 hover:bg-blue-200 transition-colors"
+									>
+										Kinh Doanh
+									</button>
+									<button
+										type="button"
+										@click="quickLogin('ketoan@xuancuong.vn', 'User@123')"
+										class="px-2.5 py-1 text-xs rounded-md bg-blue-100 text-blue-700 hover:bg-blue-200 transition-colors"
+									>
+										Kế Toán
+									</button>
+									<button
+										type="button"
+										@click="quickLogin('giaodich@xuancuong.vn', 'User@123')"
+										class="px-2.5 py-1 text-xs rounded-md bg-blue-100 text-blue-700 hover:bg-blue-200 transition-colors"
+									>
+										Giao Dịch
+									</button>
+									<button
+										type="button"
+										@click="quickLogin('cskh@xuancuong.vn', 'User@123')"
+										class="px-2.5 py-1 text-xs rounded-md bg-blue-100 text-blue-700 hover:bg-blue-200 transition-colors"
+									>
+										CSKH
+									</button>
+								</div>
+							</div>
 						</div>
 					</form>
 				</div>
@@ -202,6 +262,11 @@
 			},
 			required(v: string) {
 				return !!v || 'Field is required';
+			},
+			quickLogin(email: string, password: string) {
+				this.login = email;
+				this.password = password;
+				this.onSubmit();
 			},
 			setLoginText(e: Event) {
 				const input = e.target as HTMLInputElement | null;

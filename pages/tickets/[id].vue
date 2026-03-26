@@ -2,7 +2,7 @@
 	<div class="space-y-5">
 		<!-- Back + header -->
 		<div class="flex items-center gap-3">
-			<UButton variant="ghost" color="neutral" icon="i-heroicons-arrow-left" @click="navigateTo('/tickets')" />
+			<UButton variant="ghost" color="neutral" icon="i-heroicons-arrow-left" @click="router.push('/tickets')" />
 			<div class="flex-1">
 				<div class="flex items-center gap-2 flex-wrap">
 					<h2 class="text-xl font-bold text-gray-900">{{ ticket?.title || 'Chi tiết yêu cầu' }}</h2>
@@ -60,6 +60,18 @@
 									class="w-full"
 								/>
 							</UFormField>
+							<UFormField label="Nền tảng / Hệ thống">
+								<div class="grid grid-cols-2 gap-2 p-3 border border-gray-200 rounded-lg bg-gray-50">
+									<UCheckbox
+										v-for="opt in PLATFORM_OPTIONS"
+										:key="opt.value"
+										:id="'edit-platform-' + opt.value"
+										:model-value="editForm.platformIds.includes(opt.value)"
+										:label="opt.label"
+										@update:model-value="v => togglePlatform(editForm.platformIds, opt.value, v)"
+									/>
+								</div>
+							</UFormField>
 							<div class="flex gap-3 pt-2">
 								<UButton variant="outline" color="neutral" @click="editMode = false">Huỷ</UButton>
 								<UButton
@@ -89,7 +101,11 @@
 							<div>
 								<dt class="text-xs font-medium text-gray-500 uppercase tracking-wide">Ưu tiên</dt>
 								<dd class="mt-1">
-									<UBadge :color="getPriorityColor(ticket.priority)" variant="soft" size="sm">
+									<UBadge :color="getPriorityColor(ticket.priority)" variant="soft" size="sm" class="gap-1">
+										<UIcon
+											:name="getPriorityIcon(ticket.priority)"
+											:class="['w-3 h-3', getPriorityIconClass(ticket.priority)]"
+										/>
 										{{ getPriorityLabel(ticket.priority) }}
 									</UBadge>
 								</dd>
@@ -101,6 +117,18 @@
 							<div>
 								<dt class="text-xs font-medium text-gray-500 uppercase tracking-wide">Deadline</dt>
 								<dd class="mt-1 text-sm text-gray-700">{{ formatDate(ticket.deadline) }}</dd>
+							</div>
+							<div v-if="(ticket as any).platformIds?.length" class="col-span-2">
+								<dt class="text-xs font-medium text-gray-500 uppercase tracking-wide">Nền tảng / Hệ thống</dt>
+								<dd class="mt-1 flex flex-wrap gap-1.5">
+									<span
+										v-for="p in (ticket as any).platformIds"
+										:key="p"
+										class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-700"
+									>
+										{{ getPlatformLabel(p) }}
+									</span>
+								</dd>
 							</div>
 							<div>
 								<dt class="text-xs font-medium text-gray-500 uppercase tracking-wide">Người yêu cầu</dt>
@@ -115,6 +143,10 @@
 								<dd class="mt-1 text-sm text-gray-700 bg-green-50 text-green-700 w-fit rounded p-1">
 									{{ ticket.estimateDays }} ngày
 								</dd>
+							</div>
+							<div v-if="ticket.estimateStartDate">
+								<dt class="text-xs font-medium text-gray-500 uppercase tracking-wide">Ngày dự kiến bắt đầu</dt>
+								<dd class="mt-1 text-sm text-gray-700">{{ formatDate(ticket.estimateStartDate) }}</dd>
 							</div>
 							<div v-if="ticket.estimateCost !== null && ticket.estimateCost !== undefined && canSeeCost">
 								<dt class="text-xs font-medium text-gray-500 uppercase tracking-wide">Chi phí dự kiến</dt>
@@ -182,15 +214,38 @@
 								Từ chối
 							</UButton>
 
-							<!-- Review (tech) -->
+							<!-- Receive (implementer tiếp nhận) -->
+							<UButton
+								v-if="availableActions.includes('receive')"
+								icon="i-heroicons-inbox-arrow-down"
+								:loading="actionLoading === 'receive'"
+								color="info"
+								@click="handleAction('receive')"
+							>
+								Tiếp nhận
+							</UButton>
+
+							<!-- Review: BA xong, đề xuất estimate -->
 							<UButton
 								v-if="availableActions.includes('review')"
 								icon="i-heroicons-clipboard-document-check"
 								:loading="actionLoading === 'review'"
-								color="info"
+								color="success"
 								@click="openActionModal('review')"
 							>
-								Xem xét & Estimate
+								Đề xuất & Báo giá
+							</UButton>
+
+							<!-- Review Reject: BA từ chối -->
+							<UButton
+								v-if="availableActions.includes('review-reject')"
+								icon="i-heroicons-no-symbol"
+								:loading="actionLoading === 'review-reject'"
+								color="error"
+								variant="outline"
+								@click="openActionModal('review-reject')"
+							>
+								Từ chối
 							</UButton>
 
 							<!-- Start -->
@@ -260,10 +315,16 @@
 										<span v-else>{{ idx + 1 }}</span>
 									</div>
 									<p
-										class="text-xs text-center mt-1 max-w-[60px] leading-tight"
+										class="text-xs text-center mt-1 max-w-[60px] leading-tight h-[32px]"
 										:class="isStepDone(step.key) ? 'text-green-700 font-medium' : 'text-gray-400'"
 									>
 										{{ step.label }}
+									</p>
+									<p
+										v-if="isStepDone(step.key) && getStepTimestamp(step.key)"
+										class="text-[10px] text-center text-gray-400 leading-tight mt-0.5"
+									>
+										{{ getStepTimestamp(step.key) }}
 									</p>
 								</div>
 								<div
@@ -391,8 +452,17 @@
 					</template>
 
 					<div class="space-y-4">
-						<!-- Review: estimate days + cost -->
+						<!-- Review: BA xong, đề xuất báo giá + estimate -->
 						<template v-if="currentAction === 'review'">
+							<UFormField label="Báo giá (VNĐ)" required>
+								<UInput
+									v-model="reviewCostDisplay"
+									type="text"
+									inputmode="numeric"
+									placeholder="Ví dụ: 5.000.000"
+									class="w-full"
+								/>
+							</UFormField>
 							<UFormField label="Số ngày thực hiện dự kiến" required>
 								<UInput
 									v-model="reviewDays"
@@ -403,16 +473,10 @@
 									class="w-full"
 								/>
 							</UFormField>
-							<UFormField label="Chi phí dự kiến (VNĐ)" required>
-								<UInput
-									v-model="reviewCostDisplay"
-									type="text"
-									inputmode="numeric"
-									placeholder="Ví dụ: 5.000.000"
-									class="w-full"
-								/>
+							<UFormField label="Ngày dự kiến bắt đầu thực hiện">
+								<UInput v-model="reviewStartDate" type="date" class="w-full" />
 							</UFormField>
-							<UFormField label="Ghi chú kỹ thuật (tuỳ chọn)">
+							<UFormField label="Ghi chú (tuỳ chọn)">
 								<UTextarea
 									v-model="actionNote"
 									placeholder="Mô tả phạm vi, rủi ro, giải pháp..."
@@ -424,15 +488,24 @@
 
 						<!-- Reject/Cancel: reason required -->
 						<UFormField
-							v-if="['reject', 'cancel'].includes(currentAction)"
-							:label="currentAction === 'reject' ? 'Lý do từ chối' : 'Lý do huỷ'"
+							v-if="['reject', 'review-reject', 'cancel'].includes(currentAction)"
+							:label="
+								currentAction === 'reject'
+									? 'Lý do từ chối'
+									: currentAction === 'review-reject'
+										? 'Lý do từ chối'
+										: 'Lý do huỷ'
+							"
 							required
 						>
 							<UTextarea v-model="actionReason" placeholder="Nhập lý do..." :rows="3" class="w-full" />
 						</UFormField>
 
 						<!-- Others: optional note -->
-						<UFormField v-if="!['review', 'reject', 'cancel'].includes(currentAction)" label="Ghi chú (tuỳ chọn)">
+						<UFormField
+							v-if="!['review', 'reject', 'review-reject', 'cancel'].includes(currentAction)"
+							label="Ghi chú (tuỳ chọn)"
+						>
 							<UTextarea v-model="actionNote" placeholder="Ghi chú thêm..." :rows="3" class="w-full" />
 						</UFormField>
 					</div>
@@ -442,7 +515,7 @@
 							<UButton variant="outline" color="neutral" @click="actionModalOpen = false">Huỷ</UButton>
 							<UButton
 								:loading="actionLoading === currentAction"
-								:color="['reject', 'cancel'].includes(currentAction) ? 'error' : 'success'"
+								:color="['reject', 'review-reject', 'cancel'].includes(currentAction) ? 'error' : 'success'"
 								@click="confirmAction"
 							>
 								Xác nhận
@@ -466,11 +539,13 @@
 		formatDescription,
 		renderComment,
 	} from '@/utils/formater';
+	import { PLATFORM_OPTIONS, getPlatformLabel } from '~/utils/platforms';
 
 	definePageMeta({ layout: 'default' });
 
 	const { $api } = useNuxtApp();
 	const route = useRoute();
+	const router = useRouter();
 	const authStore = useAuthStore();
 	const { user } = storeToRefs(authStore);
 	const { successToast, errorToast } = useCustomToast();
@@ -500,8 +575,18 @@
 		description: '',
 		priority: 'medium',
 		department_id: null,
+		platformIds: [] as string[],
 		deadline: '',
 	});
+
+	const togglePlatform = (list: string[], value: string, checked: boolean) => {
+		if (checked) {
+			if (!list.includes(value)) list.push(value);
+		} else {
+			const i = list.indexOf(value);
+			if (i > -1) list.splice(i, 1);
+		}
+	};
 
 	const typeOptions = [
 		{ label: 'Xử lý vận hành', value: '1' },
@@ -511,10 +596,10 @@
 	];
 
 	const priorityOptions = [
-		{ label: 'Thấp', value: 'low' },
-		{ label: 'Trung bình', value: 'medium' },
-		{ label: 'Cao', value: 'high' },
-		{ label: 'Khẩn cấp', value: 'urgent' },
+		{ label: 'Thấp', value: 'low', icon: 'i-heroicons-arrow-down' },
+		{ label: 'Trung bình', value: 'medium', icon: 'i-heroicons-minus' },
+		{ label: 'Cao', value: 'high', icon: 'i-heroicons-arrow-up' },
+		{ label: 'Khẩn cấp', value: 'urgent', icon: 'i-heroicons-bolt' },
 	];
 
 	const departmentOptions = computed(() => [
@@ -529,6 +614,7 @@
 	const actionHours = ref('');
 	const reviewDays = ref('');
 	const reviewCost = ref('');
+	const reviewStartDate = ref('');
 	const reviewCostDisplay = computed({
 		get(): string {
 			if (!reviewCost.value) return '';
@@ -542,7 +628,8 @@
 	const workflowSteps = computed(() => {
 		const steps = [
 			{ key: 'draft', label: 'Nháp' },
-			{ key: 'pending_review', label: 'Tech xem xét' },
+			{ key: 'pending_review', label: 'Chờ tiếp nhận' },
+			{ key: 'in_review', label: 'Đang BA' },
 			...(ticket.value?.type !== 1 ? [{ key: 'pending_approval', label: 'Chờ phê duyệt' }] : []),
 			{ key: 'approved', label: 'Đã duyệt' },
 			{ key: 'in_progress', label: 'Đang thực hiện' },
@@ -554,9 +641,18 @@
 
 	const statusOrder = computed(() => {
 		if (ticket.value?.type === 1) {
-			return ['draft', 'pending_review', 'approved', 'in_progress', 'completed', 'accepted'];
+			return ['draft', 'pending_review', 'in_review', 'approved', 'in_progress', 'completed', 'accepted'];
 		}
-		return ['draft', 'pending_review', 'pending_approval', 'approved', 'in_progress', 'completed', 'accepted'];
+		return [
+			'draft',
+			'pending_review',
+			'in_review',
+			'pending_approval',
+			'approved',
+			'in_progress',
+			'completed',
+			'accepted',
+		];
 	});
 
 	const isStepDone = (key: string) => {
@@ -591,16 +687,22 @@
 		if (isRequester && status === 'draft') {
 			actions.push('submit', 'edit', 'cancel');
 		}
-		if (isRequester && ['pending_review', 'pending_approval', 'approved', 'rejected'].includes(status)) {
+		if (isRequester && ['pending_review', 'in_review', 'pending_approval', 'approved', 'rejected'].includes(status)) {
 			actions.push('cancel');
+		}
+		if (isRequester && status === 'pending_review') {
+			actions.push('edit'); // có thể sửa khi chưa được tiếp nhận
 		}
 		if (isRequester && status === 'rejected') {
 			actions.push('submit', 'edit');
 		}
 
-		// Implementer: xem xét & estimate khi pending_review; bắt đầu & hoàn tất khi approved/in_progress
+		// Implementer: tiếp nhận khi pending_review → BA khi in_review → bắt đầu/hoàn tất khi approved/in_progress
 		if (isImplementer && status === 'pending_review') {
-			actions.push('review');
+			actions.push('receive');
+		}
+		if (isImplementer && status === 'in_review') {
+			actions.push('review', 'review-reject');
 		}
 		if (isImplementer && status === 'approved') {
 			actions.push('start');
@@ -627,6 +729,7 @@
 		const map: Record<string, string> = {
 			draft: 'neutral',
 			pending_review: 'info',
+			in_review: 'secondary',
 			pending_approval: 'warning',
 			approved: 'success',
 			in_progress: 'warning',
@@ -641,7 +744,8 @@
 	const getStatusLabel = (status: string) => {
 		const map: Record<string, string> = {
 			draft: 'Nháp',
-			pending_review: 'Chờ tech xem xét',
+			pending_review: 'Chờ tiếp nhận',
+			in_review: 'Đang phân tích BA',
 			pending_approval: 'Chờ phê duyệt',
 			approved: 'Đã duyệt',
 			in_progress: 'Đang thực hiện',
@@ -678,9 +782,52 @@
 		return map[priority] || priority;
 	};
 
+	const getPriorityIcon = (priority: string) => {
+		const map: Record<string, string> = {
+			low: 'i-heroicons-arrow-down',
+			medium: 'i-heroicons-minus',
+			high: 'i-heroicons-arrow-up',
+			urgent: 'i-heroicons-bolt',
+		};
+		return map[priority] || 'i-heroicons-minus';
+	};
+
+	const getPriorityIconClass = (priority: string) => {
+		const map: Record<string, string> = {
+			low: 'text-gray-500',
+			medium: 'text-blue-500',
+			high: 'text-amber-500',
+			urgent: 'text-red-500',
+		};
+		return map[priority] || 'text-gray-400';
+	};
+
 	const formatDate = (dateStr: string) => {
 		if (!dateStr) return '-';
 		return new Date(dateStr).toLocaleDateString('vi-VN', { day: '2-digit', month: '2-digit', year: 'numeric' });
+	};
+
+	const getStepTimestamp = (key: string): string | null => {
+		if (!ticket.value) return null;
+		const t = ticket.value as any;
+		const fieldMap: Record<string, string> = {
+			draft: t.createdAt,
+			pending_review: t.createdAt, // dùng createdAt vì không có submittedAt riêng
+			in_review: t.receivedAt,
+			pending_approval: t.reviewedAt,
+			approved: t.approvedAt,
+			in_progress: t.startedAt,
+			completed: t.completedAt,
+			accepted: t.acceptedAt,
+		};
+		const val = fieldMap[key];
+		if (!val) return null;
+		const d = new Date(val);
+		const dd = String(d.getDate()).padStart(2, '0');
+		const mm = String(d.getMonth() + 1).padStart(2, '0');
+		const HH = String(d.getHours()).padStart(2, '0');
+		const MM = String(d.getMinutes()).padStart(2, '0');
+		return `${dd}/${mm} ${HH}:${MM}`;
 	};
 
 	const formatCost = (cost: number) => {
@@ -690,7 +837,8 @@
 
 	// Action modal
 	const actionModalTitles: Record<string, string> = {
-		review: 'Xem xét & Estimate',
+		review: 'Đề xuất & Báo giá',
+		'review-reject': 'Từ chối',
 		approve: 'Phê duyệt yêu cầu',
 		reject: 'Từ chối yêu cầu',
 		complete: 'Hoàn tất yêu cầu',
@@ -707,6 +855,7 @@
 		actionHours.value = '';
 		reviewDays.value = '';
 		reviewCost.value = '';
+		reviewStartDate.value = '';
 		actionModalOpen.value = true;
 	};
 
@@ -716,6 +865,9 @@
 			switch (action) {
 				case 'submit':
 					await $api.ticket.submit(id);
+					break;
+				case 'receive':
+					await $api.ticket.receive(id);
 					break;
 				case 'start':
 					await $api.ticket.start(id);
@@ -734,7 +886,7 @@
 		const action = currentAction.value;
 
 		// Validate
-		if (['reject', 'cancel'].includes(action) && !actionReason.value.trim()) {
+		if (['reject', 'review-reject', 'cancel'].includes(action) && !actionReason.value.trim()) {
 			errorToast({ title: 'Vui lòng nhập lý do' });
 			return;
 		}
@@ -760,12 +912,15 @@
 					await $api.ticket.reject(id, actionReason.value);
 					break;
 				case 'review':
-					await $api.ticket.review(
-						id,
-						Number(reviewDays.value),
-						Number(reviewCost.value),
-						actionNote.value || undefined,
-					);
+					await $api.ticket.review(id, {
+						estimateDays: Number(reviewDays.value),
+						estimateCost: Number(reviewCost.value),
+						estimateNote: actionNote.value || undefined,
+						estimateStartDate: reviewStartDate.value || undefined,
+					});
+					break;
+				case 'review-reject':
+					await $api.ticket.reviewReject(id, actionReason.value);
 					break;
 				case 'complete':
 					await $api.ticket.complete(id, actionNote.value);
@@ -806,6 +961,9 @@
 		editForm.priority = ticket.value.priority ?? 'medium';
 		editForm.department_id = ticket.value.departmentId ? String(ticket.value.departmentId) : null;
 		editForm.deadline = ticket.value.deadline ? new Date(ticket.value.deadline).toISOString().slice(0, 10) : '';
+		editForm.platformIds = Array.isArray((ticket.value as any).platformIds)
+			? [...(ticket.value as any).platformIds]
+			: [];
 		editMode.value = true;
 	};
 
@@ -822,6 +980,7 @@
 				type: Number(editForm.type),
 				priority: editForm.priority,
 				departmentId: editForm.department_id ? Number(editForm.department_id) : null,
+				platformIds: editForm.platformIds.length > 0 ? editForm.platformIds : null,
 				deadline: editForm.deadline || null,
 			});
 			successToast({ title: 'Cập nhật yêu cầu thành công' });

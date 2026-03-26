@@ -160,9 +160,11 @@ export function getHistoryLabel(str: string): string {
 		commented: 'Bình luận',
 		completed: 'Hoàn tất',
 		submitted: 'Gửi ticket',
-		started: 'Bắt đầu',
+		received: 'Tiếp nhận (PCN bắt đầu phân tích)',
+		started: 'Bắt đầu thực hiện',
 		cancelled: 'Huỷ',
-		reviewed: 'Xem chi tiết và dự tính',
+		reviewed: 'Hoàn thành phân tích — đề xuất báo giá',
+		review_rejected: 'Từ chối',
 	};
 
 	if (map[str]) return map[str];
@@ -194,7 +196,11 @@ export function formatTimeWithGap(dateStr: string): string {
 
 	const dateDay = formatInTZ(date, { year: 'numeric', month: '2-digit', day: '2-digit' });
 	const todayDay = formatInTZ(now, { year: 'numeric', month: '2-digit', day: '2-digit' });
-	const yesterdayDay = formatInTZ(new Date(now.getTime() - 86_400_000), { year: 'numeric', month: '2-digit', day: '2-digit' });
+	const yesterdayDay = formatInTZ(new Date(now.getTime() - 86_400_000), {
+		year: 'numeric',
+		month: '2-digit',
+		day: '2-digit',
+	});
 
 	const hhmm = formatInTZ(date, { hour: '2-digit', minute: '2-digit', hour12: false });
 

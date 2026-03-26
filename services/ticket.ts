@@ -63,10 +63,23 @@ const base = (_baseUrl: string) => {
 				headers: getHeaders(),
 			});
 		},
-		review(id: number, estimateDays: number, estimateCost: number, estimateNote?: string): Promise<apiResponde> {
+		receive(id: number): Promise<apiResponde> {
+			return $fetch(`/api/tickets/${id}/receive`, {
+				method: 'POST',
+				headers: getHeaders(),
+			});
+		},
+		review(id: number, data: { estimateDays: number; estimateCost: number; estimateNote?: string; estimateStartDate?: string }): Promise<apiResponde> {
 			return $fetch(`/api/tickets/${id}/review`, {
 				method: 'POST',
-				body: { estimateDays, estimateCost, estimateNote },
+				body: data,
+				headers: getHeaders(),
+			});
+		},
+		reviewReject(id: number, reason: string): Promise<apiResponde> {
+			return $fetch(`/api/tickets/${id}/review-reject`, {
+				method: 'POST',
+				body: { reason },
 				headers: getHeaders(),
 			});
 		},

@@ -62,6 +62,20 @@
 					/>
 				</UFormField>
 
+				<!-- Nền tảng / Hệ thống -->
+				<UFormField label="Nền tảng / Hệ thống" name="platformIds">
+					<div class="grid grid-cols-2 gap-2 p-3 border border-gray-200 rounded-lg bg-gray-50">
+						<UCheckbox
+							v-for="opt in PLATFORM_OPTIONS"
+							:key="opt.value"
+							:id="'platform-' + opt.value"
+							:model-value="form.platformIds.includes(opt.value)"
+							:label="opt.label"
+							@update:model-value="(v) => togglePlatform(form.platformIds, opt.value, v)"
+						/>
+					</div>
+				</UFormField>
+
 				<!-- Deadline -->
 				<UFormField label="Deadline" name="deadline">
 					<UInput v-model="form.deadline" type="date" class="w-full" />
@@ -90,6 +104,7 @@
 
 <script setup lang="ts">
 	import { useCustomToast } from '~/composable/useCustomToast';
+	import { PLATFORM_OPTIONS } from '~/utils/platforms';
 
 	definePageMeta({ layout: 'default' });
 
@@ -106,8 +121,14 @@
 		description: '',
 		priority: 'medium',
 		department_id: null as string | null,
+		platformIds: [] as string[],
 		deadline: '',
 	});
+
+	const togglePlatform = (list: string[], value: string, checked: boolean) => {
+		if (checked) { if (!list.includes(value)) list.push(value); }
+		else { const i = list.indexOf(value); if (i > -1) list.splice(i, 1); }
+	};
 
 	const submitted = ref(false);
 	const savingDraft = ref(false);
@@ -123,10 +144,10 @@
 	];
 
 	const priorityOptions = [
-		{ label: 'Thấp', value: 'low' },
-		{ label: 'Trung bình', value: 'medium' },
-		{ label: 'Cao', value: 'high' },
-		{ label: 'Khẩn cấp', value: 'urgent' },
+		{ label: 'Thấp', value: 'low', icon: 'i-heroicons-arrow-down' },
+		{ label: 'Trung bình', value: 'medium', icon: 'i-heroicons-minus' },
+		{ label: 'Cao', value: 'high', icon: 'i-heroicons-arrow-up' },
+		{ label: 'Khẩn cấp', value: 'urgent', icon: 'i-heroicons-bolt' },
 	];
 
 	const departmentOptions = computed(() => [

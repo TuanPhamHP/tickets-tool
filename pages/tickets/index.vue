@@ -258,6 +258,16 @@
 		return map[priority] || priority;
 	};
 
+	const getPriorityIcon = (priority: string) => {
+		const map: Record<string, string> = {
+			low: 'i-heroicons-arrow-down',
+			medium: 'i-heroicons-minus',
+			high: 'i-heroicons-arrow-up',
+			urgent: 'i-heroicons-bolt',
+		};
+		return map[priority] || 'i-heroicons-minus';
+	};
+
 	const formatDate = (dateStr: string) => {
 		if (!dateStr) return '-';
 		return new Date(dateStr).toLocaleDateString('vi-VN', {

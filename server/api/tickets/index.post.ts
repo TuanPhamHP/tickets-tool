@@ -30,6 +30,7 @@ export default defineEventHandler(async event => {
 		priority: body.priority || 'medium',
 		requesterId: Number(auth.sub),
 		departmentId: body.departmentId || body.department_id ? Number(body.departmentId || body.department_id) : null,
+		platformIds: Array.isArray(body.platformIds) ? body.platformIds : null,
 		deadline: body.deadline ? new Date(body.deadline) : null,
 	});
 	const [ticket] = await db.select().from(tickets).where(eq(tickets.id, insertResult[0].insertId));

@@ -14,7 +14,9 @@
       "Bash(yarn drizzle-kit:*)",
       "Bash(curl -s -X POST http://localhost:3000/api/seed)",
       "Bash(curl -s -X POST http://localhost:3000/api/seed -w \"\\\\n%{http_code}\")",
-      "Bash(curl -s -X POST http://localhost:3000/api/seed -H \"Content-Type: application/json\" -w \"\\\\n%{http_code}\")"
+      "Bash(curl -s -X POST http://localhost:3000/api/seed -H \"Content-Type: application/json\" -w \"\\\\n%{http_code}\")",
+      "Bash(yarn db:generate)",
+      "Bash(yarn db:migrate)"
     ]
   }
 }
