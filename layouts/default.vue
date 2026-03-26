@@ -47,6 +47,15 @@
 						:active="isActive('/tickets', true)"
 					/>
 
+					<!-- Dashboard -->
+					<NavItem
+						:to="dashboardRoute"
+						icon="i-heroicons-chart-bar"
+						label="Báo cáo"
+						:mini="appStateStore.sideBarMini"
+						:active="isActive('/dashboard', true)"
+					/>
+
 					<!-- Admin section -->
 					<template v-if="isAdminOrApprover">
 						<div
@@ -245,11 +254,21 @@ const userInitial = computed(() => {
 	return (words[words.length - 2][0] + words[words.length - 1][0]).toUpperCase();
 });
 
+const dashboardRoute = computed(() => {
+	const role = (user.value as any)?.role;
+	if (role === 'implementer') return '/dashboard/implementer';
+	if (role === 'requester') return '/dashboard/requester';
+	return '/dashboard/admin';
+});
+
 const pageTitleMap: Record<string, string> = {
 	'/tickets': 'Danh sách yêu cầu',
 	'/tickets/create': 'Tạo yêu cầu mới',
 	'/admin/departments': 'Quản lý phòng ban',
 	'/admin/users': 'Quản lý nhân sự',
+	'/dashboard/admin': 'Báo cáo tổng quan',
+	'/dashboard/requester': 'Báo cáo của tôi',
+	'/dashboard/implementer': 'Báo cáo công việc',
 };
 
 const pageTitle = computed(() => {

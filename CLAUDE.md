@@ -224,3 +224,4 @@ Những rule này LUÔN áp dụng, không có ngoại lệ:
 - Forms & notifications: @docs/forms.md
 - Code review checklist: @docs/review.md
 - Database & migrations: @docs/database.md
+- Dashboard: @docs/dashboard.md
